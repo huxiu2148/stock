@@ -1,0 +1,166 @@
+-- Schema for salary / leave / stock tracker
+-- Run this once in your Supabase project's SQL editor.
+
+create extension if not exists "pgcrypto";
+
+-- ============================================================
+-- 薪資紀錄 (one row per pay period / month)
+-- ============================================================
+create table if not exists salary_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  year_month text not null,                -- e.g. '2025-07'
+  pay_date date,                           -- 發薪日
+
+  -- 底薪組成 (順序: 基本底薪, 職務加給, 伙食費, 其他, 其他加給, 夜班津貼)
+  base_basic numeric not null default 0,           -- 基本底薪
+  base_position numeric not null default 0,        -- 職務加給
+  base_meal numeric not null default 0,             -- 伙食費
+  base_other numeric not null default 0,            -- 其他
+  base_other_allowance numeric not null default 0,  -- 其他加給
+  base_night_shift numeric not null default 0,      -- 夜班津貼
+
+  performance_bonus numeric not null default 0,     -- 考績獎金
+  bonus numeric not null default 0,                 -- 獎金 (misc / year-end etc.)
+
+  -- 扣除項目 (固定欄位)
+  deduct_welfare numeric not null default 0,             -- 福利金
+  deduct_labor_insurance numeric not null default 0,     -- 勞保費
+  deduct_health_insurance numeric not null default 0,    -- 健保費
+  deduct_labor_pension_self numeric not null default 0,  -- 勞退自提
+  deduct_guarantee_insurance numeric not null default 0, -- 人事保證保險
+
+  hourly_wage numeric,                     -- 用於加班費試算，留空則自動用底薪/240推算
+  overtime_pay_override numeric,           -- 加班費(含誤餐費)手動覆寫金額，留空則用當月加班紀錄自動試算
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  unique (user_id, year_month)
+);
+
+-- ============================================================
+-- 加班紀錄
+-- ============================================================
+create table if not exists overtime_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  work_date date not null,
+  start_time time not null,
+  end_time time not null,
+  minutes integer not null,       -- 自動換算
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
+-- 遲到紀錄
+-- ============================================================
+create table if not exists late_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  work_date date not null,
+  start_time time not null,
+  end_time time not null,
+  minutes integer not null,
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
+-- 請假紀錄
+-- ============================================================
+create table if not exists leave_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  work_date date not null,
+  start_time time not null,
+  end_time time not null,
+  minutes integer not null,
+  leave_type text not null,   -- 特休 / 生理假 / 事假 / 病假 / 特別病假 / 無薪假 / 其他
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
+-- 假別剩餘天數 (手動維護，如試算表紅字提示)
+-- ============================================================
+create table if not exists leave_balances (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  leave_type text not null,
+  remaining_days numeric not null default 0,
+  as_of_note text,             -- e.g. '~2025/08/31'
+  updated_at timestamptz not null default now(),
+  unique (user_id, leave_type)
+);
+
+-- ============================================================
+-- 股票交易紀錄
+-- ============================================================
+create table if not exists stock_trades (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+
+  market text not null check (market in ('TW', 'US')),      -- 台股 / 美股
+  currency text not null check (currency in ('TWD', 'USD')), -- 結算幣別
+  symbol text not null,        -- 代碼
+  name text,                   -- 名稱/備註
+
+  buy_date date not null,
+  sell_date date,
+
+  buy_price numeric not null default 0,
+  target_sell_price numeric,        -- 理想賣出
+  actual_sell_price numeric,        -- 實際賣出
+  shares numeric not null default 0,
+
+  fee_buy numeric not null default 0,   -- 買進手續費
+  fee_sell numeric not null default 0,  -- 賣出手續費
+  tax numeric not null default 0,       -- 交易稅
+
+  exchange_rate_buy numeric,   -- 買進當時匯率 (美股 USD 用)
+  exchange_rate_sell numeric,  -- 賣出當時匯率
+
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
+-- Row Level Security: 每個使用者只能存取自己的資料
+-- ============================================================
+alter table salary_records enable row level security;
+alter table overtime_entries enable row level security;
+alter table late_entries enable row level security;
+alter table leave_entries enable row level security;
+alter table leave_balances enable row level security;
+alter table stock_trades enable row level security;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades']
+  loop
+    execute format('drop policy if exists "select_own" on %I', t);
+    execute format('create policy "select_own" on %I for select using (auth.uid() = user_id)', t);
+    execute format('drop policy if exists "insert_own" on %I', t);
+    execute format('create policy "insert_own" on %I for insert with check (auth.uid() = user_id)', t);
+    execute format('drop policy if exists "update_own" on %I', t);
+    execute format('create policy "update_own" on %I for update using (auth.uid() = user_id) with check (auth.uid() = user_id)', t);
+    execute format('drop policy if exists "delete_own" on %I', t);
+    execute format('create policy "delete_own" on %I for delete using (auth.uid() = user_id)', t);
+  end loop;
+end $$;
+
+create index if not exists idx_overtime_user_date on overtime_entries(user_id, work_date);
+create index if not exists idx_late_user_date on late_entries(user_id, work_date);
+create index if not exists idx_leave_user_date on leave_entries(user_id, work_date);
+create index if not exists idx_stock_user_market on stock_trades(user_id, market);
+create index if not exists idx_salary_user_month on salary_records(user_id, year_month);
