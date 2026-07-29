@@ -44,6 +44,10 @@ export function OvertimeSection({
     (sum, r) => sum + r.calc.pay + r.calc.mealAllowance,
     0
   );
+  const totalPayableHours = rows.reduce(
+    (sum, r) => sum + r.calc.payableMinutes / 60,
+    0
+  );
   const usingOverride = record.overtime_pay_override != null;
 
   return (
@@ -79,6 +83,9 @@ export function OvertimeSection({
                 <span className="text-slate-400">
                   {formatMinutes(entry.minutes)}
                 </span>
+                <span className="text-slate-400">
+                  （試算 {(calc.payableMinutes / 60).toFixed(2)} 小時）
+                </span>
                 {entry.note && (
                   <span className="text-slate-400">· {entry.note}</span>
                 )}
@@ -109,6 +116,9 @@ export function OvertimeSection({
         <div className="text-sm text-slate-600">
           自動試算加班費(含誤餐費)合計：
           <b className="ml-1 text-slate-900">{formatCurrency(suggestedTotal)}</b>
+          <span className="ml-2 text-xs text-slate-400">
+            （試算時數合計 {totalPayableHours.toFixed(2)} 小時，可對照薪資單「加班時數」欄位）
+          </span>
         </div>
         <div className="flex items-end gap-2">
           <MoneyInput
