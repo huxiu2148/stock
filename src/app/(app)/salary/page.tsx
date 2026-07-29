@@ -261,7 +261,6 @@ export default function SalaryPage() {
       <DeductionsSection record={currentRecord} onChange={handleRecordChange} />
 
       <OvertimeSection
-        key={selectedMonth}
         record={currentRecord}
         entries={monthOvertimeEntries}
         defaultDate={defaultWorkDate(selectedMonth)}
@@ -280,7 +279,6 @@ export default function SalaryPage() {
       />
 
       <LateSection
-        key={selectedMonth}
         entries={monthLateEntries}
         defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddLate}
@@ -292,7 +290,6 @@ export default function SalaryPage() {
       />
 
       <LeaveSection
-        key={selectedMonth}
         entries={monthLeaveEntries}
         defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddLeave}

@@ -48,6 +48,13 @@ export function TimeRangeForm({
   const [endTime, setEndTime] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [prevDefaultDate, setPrevDefaultDate] = useState(defaultDate);
+
+  // 換月份時 defaultDate 會變，這裡直接在 render 期間同步，不用 remount 整個表單。
+  if (defaultDate !== prevDefaultDate) {
+    setPrevDefaultDate(defaultDate);
+    setWorkDate(defaultDate ?? todayStr());
+  }
 
   const minutes = useMemo(
     () => (startTime && endTime ? computeMinutes(startTime, endTime) : 0),
