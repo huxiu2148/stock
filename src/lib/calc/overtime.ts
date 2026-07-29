@@ -20,6 +20,7 @@ const SECOND_TIER_RATE = 1.67;
 
 export interface OvertimePayResult {
   payableMinutes: number;
+  /** 精確金額（未四捨五入），供加總多筆紀錄後統一在畫面上捨入一次，避免誤差累積。 */
   pay: number;
   mealAllowance: number;
 }
@@ -55,5 +56,5 @@ export function computeOvertimePayForRange(
     hourlyWage * firstTierHours * FIRST_TIER_RATE +
     hourlyWage * secondTierHours * SECOND_TIER_RATE;
 
-  return { payableMinutes, pay: Math.round(pay), mealAllowance };
+  return { payableMinutes, pay, mealAllowance };
 }
