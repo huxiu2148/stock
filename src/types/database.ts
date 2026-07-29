@@ -4,6 +4,7 @@ export type LeaveType =
   | "事假"
   | "病假"
   | "特別病假"
+  | "公假"
   | "無薪假"
   | "其他";
 
@@ -13,6 +14,7 @@ export const LEAVE_TYPES: LeaveType[] = [
   "事假",
   "病假",
   "特別病假",
+  "公假",
   "無薪假",
   "其他",
 ];
