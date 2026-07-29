@@ -14,9 +14,15 @@ interface LateSectionProps {
     note?: string;
   }) => Promise<void>;
   onDelete: (id: string) => void;
+  defaultDate?: string;
 }
 
-export function LateSection({ entries, onAdd, onDelete }: LateSectionProps) {
+export function LateSection({
+  entries,
+  onAdd,
+  onDelete,
+  defaultDate,
+}: LateSectionProps) {
   const totalMinutes = entries.reduce((sum, e) => sum + e.minutes, 0);
 
   return (
@@ -34,6 +40,7 @@ export function LateSection({ entries, onAdd, onDelete }: LateSectionProps) {
           submitLabel="新增遲到"
           defaultStartTime={WORK_HOURS.start}
           computeMinutes={workMinutesBetween}
+          defaultDate={defaultDate}
         />
       </div>
 

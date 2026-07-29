@@ -27,6 +27,8 @@ interface TimeRangeFormProps {
   quickFill?: QuickFill;
   /** 時長旁的補充說明，例如提醒已扣除午休時間。 */
   durationHint?: string;
+  /** 日期欄位的預設值，例如查看某個月份時預設帶當月第一天。 */
+  defaultDate?: string;
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -39,8 +41,9 @@ export function TimeRangeForm({
   defaultStartTime = "",
   quickFill,
   durationHint,
+  defaultDate,
 }: TimeRangeFormProps) {
-  const [workDate, setWorkDate] = useState(todayStr());
+  const [workDate, setWorkDate] = useState(defaultDate ?? todayStr());
   const [startTime, setStartTime] = useState(defaultStartTime);
   const [endTime, setEndTime] = useState("");
   const [note, setNote] = useState("");

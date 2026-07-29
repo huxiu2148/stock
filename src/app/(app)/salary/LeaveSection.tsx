@@ -16,9 +16,15 @@ interface LeaveSectionProps {
     note?: string;
   }) => Promise<void>;
   onDelete: (id: string) => void;
+  defaultDate?: string;
 }
 
-export function LeaveSection({ entries, onAdd, onDelete }: LeaveSectionProps) {
+export function LeaveSection({
+  entries,
+  onAdd,
+  onDelete,
+  defaultDate,
+}: LeaveSectionProps) {
   const [leaveType, setLeaveType] = useState<LeaveType>("特休");
 
   return (
@@ -30,6 +36,7 @@ export function LeaveSection({ entries, onAdd, onDelete }: LeaveSectionProps) {
           submitLabel="新增請假"
           computeMinutes={workMinutesBetween}
           durationHint="已扣除午休"
+          defaultDate={defaultDate}
           quickFill={{
             label: "全天",
             start: WORK_HOURS.start,

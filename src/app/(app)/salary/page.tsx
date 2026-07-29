@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchSalaryRecords,
   upsertSalaryRecord,
+  deleteSalaryRecord,
   fetchOvertimeEntries,
   addOvertimeEntry,
   deleteOvertimeEntry,
@@ -36,6 +37,16 @@ import { SummaryBar } from "./SummaryBar";
 function currentYearMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** 查看當月時預設今天，查看其他月份時預設該月第一天，避免加班/遲到/請假紀錄的日期跑到今天。 */
+function defaultWorkDate(yearMonth: string): string {
+  const today = todayStr();
+  return today.startsWith(yearMonth) ? today : `${yearMonth}-01`;
 }
 
 function draftRecord(yearMonth: string): SalaryRecord {
@@ -130,6 +141,22 @@ export default function SalaryPage() {
     [leaveEntries, selectedMonth]
   );
 
+  async function handleDeleteMonth(yearMonth: string) {
+    const record = records.find((r) => r.year_month === yearMonth);
+    try {
+      if (record) {
+        await deleteSalaryRecord(record.id);
+        setRecords((prev) => prev.filter((r) => r.year_month !== yearMonth));
+      }
+      setExtraMonths((prev) => prev.filter((m) => m !== yearMonth));
+      if (selectedMonth === yearMonth) {
+        setSelectedMonth(currentYearMonth());
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "刪除失敗");
+    }
+  }
+
   async function handleRecordChange(patch: Partial<SalaryRecord>) {
     setRecords((prev) => {
       const exists = prev.some((r) => r.year_month === selectedMonth);
@@ -217,6 +244,7 @@ export default function SalaryPage() {
           setExtraMonths((prev) => Array.from(new Set([...prev, ym])));
           setSelectedMonth(ym);
         }}
+        onDeleteMonth={handleDeleteMonth}
       />
 
       <SummaryBar
@@ -232,8 +260,10 @@ export default function SalaryPage() {
       <DeductionsSection record={currentRecord} onChange={handleRecordChange} />
 
       <OvertimeSection
+        key={selectedMonth}
         record={currentRecord}
         entries={monthOvertimeEntries}
+        defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddOvertime}
         onDelete={(id) =>
           deleteOvertimeEntry(id).then(() =>
@@ -249,7 +279,9 @@ export default function SalaryPage() {
       />
 
       <LateSection
+        key={selectedMonth}
         entries={monthLateEntries}
+        defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddLate}
         onDelete={(id) =>
           deleteLateEntry(id).then(() =>
@@ -259,7 +291,9 @@ export default function SalaryPage() {
       />
 
       <LeaveSection
+        key={selectedMonth}
         entries={monthLeaveEntries}
+        defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddLeave}
         onDelete={(id) =>
           deleteLeaveEntry(id).then(() =>

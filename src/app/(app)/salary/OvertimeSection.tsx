@@ -21,6 +21,7 @@ interface OvertimeSectionProps {
   onDelete: (id: string) => void;
   onOverrideChange: (value: number) => void;
   onClearOverride: () => void;
+  defaultDate?: string;
 }
 
 export function OvertimeSection({
@@ -30,6 +31,7 @@ export function OvertimeSection({
   onDelete,
   onOverrideChange,
   onClearOverride,
+  defaultDate,
 }: OvertimeSectionProps) {
   const hourlyWage =
     record.hourly_wage ?? estimateHourlyWage(hourlyWageBase(record));
@@ -57,6 +59,7 @@ export function OvertimeSection({
         <TimeRangeForm
           onSubmit={onAdd}
           submitLabel="新增加班"
+          defaultDate={defaultDate}
         />
       </div>
 
