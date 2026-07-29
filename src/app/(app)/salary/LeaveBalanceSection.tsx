@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { LEAVE_TYPES, type LeaveBalance, type LeaveType } from "@/types/database";
+import type { LeaveBalance, LeaveType } from "@/types/database";
+
+// 只有特休、生理假需要追蹤剩餘天數；其他假別只記錄請假時間，不需要天數上限。
+const BALANCE_LEAVE_TYPES: LeaveType[] = ["特休", "生理假"];
 
 interface LeaveBalanceSectionProps {
   balances: LeaveBalance[];
@@ -70,7 +73,7 @@ export function LeaveBalanceSection({
         手動維護，就像試算表上的紅字提醒；請假後自行更新剩餘天數。
       </p>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {LEAVE_TYPES.map((t) => (
+        {BALANCE_LEAVE_TYPES.map((t) => (
           <BalanceEditor
             key={t}
             leaveType={t}
