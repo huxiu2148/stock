@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TimeRangeForm } from "@/components/TimeRangeForm";
-import { formatMinutes } from "@/lib/calc/time";
+import { formatMinutes, workMinutesBetween, WORK_HOURS } from "@/lib/calc/time";
 import { LEAVE_TYPES, type LeaveEntry, type LeaveType } from "@/types/database";
 
 interface LeaveSectionProps {
@@ -28,6 +28,13 @@ export function LeaveSection({ entries, onAdd, onDelete }: LeaveSectionProps) {
       <div className="mt-3">
         <TimeRangeForm
           submitLabel="新增請假"
+          computeMinutes={workMinutesBetween}
+          durationHint="已扣除午休"
+          quickFill={{
+            label: "全天",
+            start: WORK_HOURS.start,
+            end: WORK_HOURS.end,
+          }}
           extraFields={
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-slate-500">假別</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { TimeRangeForm } from "@/components/TimeRangeForm";
-import { formatMinutes } from "@/lib/calc/time";
+import { formatMinutes, workMinutesBetween, WORK_HOURS } from "@/lib/calc/time";
 import type { LateEntry } from "@/types/database";
 
 interface LateSectionProps {
@@ -29,7 +29,12 @@ export function LateSection({ entries, onAdd, onDelete }: LateSectionProps) {
       </div>
 
       <div className="mt-3">
-        <TimeRangeForm onSubmit={onAdd} submitLabel="新增遲到" />
+        <TimeRangeForm
+          onSubmit={onAdd}
+          submitLabel="新增遲到"
+          defaultStartTime={WORK_HOURS.start}
+          computeMinutes={workMinutesBetween}
+        />
       </div>
 
       {entries.length > 0 && (
