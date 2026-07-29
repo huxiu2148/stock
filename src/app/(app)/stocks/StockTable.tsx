@@ -10,9 +10,15 @@ interface StockTableProps {
   trades: StockTrade[];
   onUpdate: (id: string, input: StockTradeInput) => Promise<void>;
   onDelete: (id: string) => void;
+  knownSymbols?: Record<string, string>;
 }
 
-export function StockTable({ trades, onUpdate, onDelete }: StockTableProps) {
+export function StockTable({
+  trades,
+  onUpdate,
+  onDelete,
+  knownSymbols,
+}: StockTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   if (trades.length === 0) {
@@ -42,6 +48,7 @@ export function StockTable({ trades, onUpdate, onDelete }: StockTableProps) {
                     <StockForm
                       initial={trade}
                       submitLabel="儲存變更"
+                      knownSymbols={knownSymbols}
                       onCancel={() => setEditingId(null)}
                       onSubmit={async (input) => {
                         await onUpdate(trade.id, input);

@@ -8,6 +8,8 @@ interface StockFormProps {
   onSubmit: (input: StockTradeInput) => Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
+  /** 代碼 -> 名稱，來自你之前輸入過的交易紀錄，用來自動帶出名稱。 */
+  knownSymbols?: Record<string, string>;
 }
 
 function field(v: number | null | undefined): string {
@@ -30,6 +32,7 @@ export function StockForm({
   onSubmit,
   onCancel,
   submitLabel = "新增交易",
+  knownSymbols = {},
 }: StockFormProps) {
   const [market, setMarket] = useState<Market>(initial?.market ?? "TW");
   const [currency, setCurrency] = useState<Currency>(
@@ -37,6 +40,7 @@ export function StockForm({
   );
   const [symbol, setSymbol] = useState(initial?.symbol ?? "");
   const [name, setName] = useState(initial?.name ?? "");
+  const [nameTouched, setNameTouched] = useState(Boolean(initial?.name));
   const [buyDate, setBuyDate] = useState(
     initial?.buy_date ?? new Date().toISOString().slice(0, 10)
   );
@@ -130,14 +134,34 @@ export function StockForm({
         <span className={capCls}>代碼</span>
         <input
           value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
+          list="known-stock-symbols"
+          onChange={(e) => {
+            const next = e.target.value;
+            setSymbol(next);
+            const matched = knownSymbols[next.trim()];
+            if (matched && !nameTouched) setName(matched);
+          }}
           required
           className={inputCls}
         />
+        <datalist id="known-stock-symbols">
+          {Object.entries(knownSymbols).map(([code, symbolName]) => (
+            <option key={code} value={code}>
+              {symbolName}
+            </option>
+          ))}
+        </datalist>
       </label>
       <label className={labelCls}>
         <span className={capCls}>名稱/備註</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+        <input
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameTouched(true);
+          }}
+          className={inputCls}
+        />
       </label>
 
       <label className={labelCls}>

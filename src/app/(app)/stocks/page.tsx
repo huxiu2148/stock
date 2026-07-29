@@ -40,6 +40,15 @@ export default function StocksPage() {
     })();
   }, []);
 
+  const knownSymbols = useMemo(() => {
+    const map: Record<string, string> = {};
+    // trades 依買進日新到舊排序，第一次遇到的名稱即為最新一次輸入的名稱
+    for (const t of trades) {
+      if (t.name && !map[t.symbol]) map[t.symbol] = t.name;
+    }
+    return map;
+  }, [trades]);
+
   const filtered = useMemo(
     () => (tab === "ALL" ? trades : trades.filter((t) => t.market === tab)),
     [trades, tab]
@@ -111,6 +120,7 @@ export default function StocksPage() {
         {showAddForm && (
           <div className="mt-4">
             <StockForm
+              knownSymbols={knownSymbols}
               onSubmit={async (input) => {
                 const saved = await createStockTrade(input);
                 setTrades((prev) => [saved, ...prev]);
@@ -124,6 +134,7 @@ export default function StocksPage() {
         <div className="mt-4">
           <StockTable
             trades={filtered}
+            knownSymbols={knownSymbols}
             onUpdate={async (id, input) => {
               const saved = await updateStockTrade(id, input);
               setTrades((prev) => prev.map((t) => (t.id === id ? saved : t)));
