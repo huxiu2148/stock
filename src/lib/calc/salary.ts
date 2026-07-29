@@ -3,18 +3,18 @@ import { computeOvertimePayForRange, estimateHourlyWage } from "./overtime";
 import { summarizeLeaveDeduction } from "./leave";
 import type { OvertimeEntry } from "@/types/database";
 
-/** 遲到扣款：全額依時薪比例扣，時薪=底薪/30/8。 */
+/**
+ * 遲到扣款：全額依時薪比例扣，時薪=底薪/30/8。
+ * 先加總整個月的遲到分鐘數，最後才四捨五入一次，避免每筆個別捨入
+ * 造成誤差累積（例如 3+6+2 分鐘應視為 11 分鐘一次計算）。
+ */
 export function summarizeLateDeduction(
   entries: Pick<LateEntry, "minutes">[],
   hourlyWage: number
 ): { totalMinutes: number; totalDeduction: number } {
-  return entries.reduce(
-    (acc, e) => ({
-      totalMinutes: acc.totalMinutes + e.minutes,
-      totalDeduction: acc.totalDeduction + Math.round((e.minutes / 60) * hourlyWage),
-    }),
-    { totalMinutes: 0, totalDeduction: 0 }
-  );
+  const totalMinutes = entries.reduce((sum, e) => sum + e.minutes, 0);
+  const totalDeduction = Math.round((totalMinutes / 60) * hourlyWage);
+  return { totalMinutes, totalDeduction };
 }
 
 export function baseSalaryTotal(record: {

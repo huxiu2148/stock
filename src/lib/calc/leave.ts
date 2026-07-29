@@ -18,39 +18,33 @@ export const LEAVE_DEDUCTION_RATES: Record<LeaveType, number> = {
   其他: 0,
 };
 
-export interface LeaveDeductionResult {
-  minutes: number;
-  rate: number;
-  amount: number;
-}
-
-export function computeLeaveDeduction(
-  minutes: number,
-  leaveType: LeaveType,
-  hourlyWage: number
-): LeaveDeductionResult {
-  const rate = LEAVE_DEDUCTION_RATES[leaveType] ?? 0;
-  const amount = Math.round((minutes / 60) * hourlyWage * rate);
-  return { minutes, rate, amount };
-}
-
 export interface LeaveDeductionSummary {
   totalMinutes: number;
   totalDeduction: number;
 }
 
+/**
+ * 先依假別把分鐘數加總，最後才四捨五入一次算出扣款金額，
+ * 避免每一筆個別捨入造成誤差累積（例如 3+6+2 分鐘應視為 11 分鐘一次計算，
+ * 而不是 3 筆各自捨入後再加總）。
+ */
 export function summarizeLeaveDeduction(
   entries: { minutes: number; leave_type: LeaveType }[],
   hourlyWage: number
 ): LeaveDeductionSummary {
-  return entries.reduce<LeaveDeductionSummary>(
-    (acc, e) => {
-      const { amount } = computeLeaveDeduction(e.minutes, e.leave_type, hourlyWage);
-      return {
-        totalMinutes: acc.totalMinutes + e.minutes,
-        totalDeduction: acc.totalDeduction + amount,
-      };
-    },
-    { totalMinutes: 0, totalDeduction: 0 }
-  );
+  const minutesByType = new Map<LeaveType, number>();
+  let totalMinutes = 0;
+
+  for (const e of entries) {
+    totalMinutes += e.minutes;
+    minutesByType.set(e.leave_type, (minutesByType.get(e.leave_type) ?? 0) + e.minutes);
+  }
+
+  let totalDeduction = 0;
+  for (const [leaveType, minutes] of minutesByType) {
+    const rate = LEAVE_DEDUCTION_RATES[leaveType] ?? 0;
+    totalDeduction += Math.round((minutes / 60) * hourlyWage * rate);
+  }
+
+  return { totalMinutes, totalDeduction };
 }
