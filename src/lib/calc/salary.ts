@@ -1,5 +1,6 @@
-import type { SalaryRecord } from "@/types/database";
+import type { LeaveEntry, LeaveType, SalaryRecord } from "@/types/database";
 import { computeOvertimePay, estimateHourlyWage } from "./overtime";
+import { summarizeLeaveDeduction } from "./leave";
 import type { OvertimeEntry } from "@/types/database";
 
 export function baseSalaryTotal(record: {
@@ -64,18 +65,24 @@ export interface SalaryTotals {
   deductions: number;
   overtimePay: number;
   mealAllowance: number;
+  leaveDeduction: number;
   grossPay: number;
   netPay: number;
 }
 
 export function summarizeSalaryRecord(
   record: SalaryRecord,
-  overtimeEntries: Pick<OvertimeEntry, "minutes">[]
+  overtimeEntries: Pick<OvertimeEntry, "minutes">[],
+  leaveEntries: Pick<LeaveEntry, "minutes" | "leave_type">[] = []
 ): SalaryTotals {
   const baseSalary = baseSalaryTotal(record);
   const deductions = deductionsTotal(record);
   const hourlyWage = record.hourly_wage ?? estimateHourlyWage(baseSalary);
   const overtime = summarizeOvertime(overtimeEntries, hourlyWage);
+  const leave = summarizeLeaveDeduction(
+    leaveEntries as { minutes: number; leave_type: LeaveType }[],
+    hourlyWage
+  );
 
   const overtimeTotal =
     record.overtime_pay_override ??
@@ -87,13 +94,14 @@ export function summarizeSalaryRecord(
     record.bonus +
     record.festival_bonus +
     overtimeTotal;
-  const netPay = grossPay - deductions;
+  const netPay = grossPay - deductions - leave.totalDeduction;
 
   return {
     baseSalary,
     deductions,
     overtimePay: overtime.totalPay,
     mealAllowance: overtime.totalMealAllowance,
+    leaveDeduction: leave.totalDeduction,
     grossPay,
     netPay,
   };
@@ -110,7 +118,8 @@ export interface YearlySalarySummary {
 
 export function summarizeYearlySalary(
   records: SalaryRecord[],
-  overtimeEntries: OvertimeEntry[]
+  overtimeEntries: OvertimeEntry[],
+  leaveEntries: LeaveEntry[] = []
 ): YearlySalarySummary[] {
   const byYear = new Map<string, YearlySalarySummary>();
 
@@ -119,7 +128,10 @@ export function summarizeYearlySalary(
     const entries = overtimeEntries.filter((e) =>
       e.work_date.startsWith(record.year_month)
     );
-    const totals = summarizeSalaryRecord(record, entries);
+    const monthLeaveEntries = leaveEntries.filter((e) =>
+      e.work_date.startsWith(record.year_month)
+    );
+    const totals = summarizeSalaryRecord(record, entries, monthLeaveEntries);
 
     const existing = byYear.get(year) ?? {
       year,

@@ -2,20 +2,22 @@
 
 import { formatCurrency } from "@/lib/format";
 import { summarizeSalaryRecord } from "@/lib/calc/salary";
-import type { OvertimeEntry, SalaryRecord } from "@/types/database";
+import type { LeaveEntry, OvertimeEntry, SalaryRecord } from "@/types/database";
 
 interface SummaryBarProps {
   record: SalaryRecord;
   overtimeEntries: OvertimeEntry[];
+  leaveEntries: LeaveEntry[];
   onPayDateChange: (date: string) => void;
 }
 
 export function SummaryBar({
   record,
   overtimeEntries,
+  leaveEntries,
   onPayDateChange,
 }: SummaryBarProps) {
-  const totals = summarizeSalaryRecord(record, overtimeEntries);
+  const totals = summarizeSalaryRecord(record, overtimeEntries, leaveEntries);
 
   return (
     <section className="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
@@ -42,6 +44,14 @@ export function SummaryBar({
               -{formatCurrency(totals.deductions)}
             </div>
           </div>
+          {totals.leaveDeduction > 0 && (
+            <div>
+              <div className="text-slate-400">請假扣款</div>
+              <div className="text-lg font-semibold text-rose-300">
+                -{formatCurrency(totals.leaveDeduction)}
+              </div>
+            </div>
+          )}
           <div>
             <div className="text-slate-400">實發金額</div>
             <div className="text-xl font-bold">

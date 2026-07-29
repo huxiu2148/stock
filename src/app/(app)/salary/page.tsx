@@ -222,6 +222,7 @@ export default function SalaryPage() {
       <SummaryBar
         record={currentRecord}
         overtimeEntries={monthOvertimeEntries}
+        leaveEntries={monthLeaveEntries}
         onPayDateChange={(date) => handleRecordChange({ pay_date: date })}
       />
 
