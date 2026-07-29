@@ -94,3 +94,48 @@ export function summarizeSalaryRecord(
     netPay,
   };
 }
+
+export interface YearlySalarySummary {
+  year: string;
+  monthCount: number;
+  totalGross: number;
+  totalNet: number;
+  avgGross: number;
+  avgNet: number;
+}
+
+export function summarizeYearlySalary(
+  records: SalaryRecord[],
+  overtimeEntries: OvertimeEntry[]
+): YearlySalarySummary[] {
+  const byYear = new Map<string, YearlySalarySummary>();
+
+  for (const record of records) {
+    const year = record.year_month.slice(0, 4);
+    const entries = overtimeEntries.filter((e) =>
+      e.work_date.startsWith(record.year_month)
+    );
+    const totals = summarizeSalaryRecord(record, entries);
+
+    const existing = byYear.get(year) ?? {
+      year,
+      monthCount: 0,
+      totalGross: 0,
+      totalNet: 0,
+      avgGross: 0,
+      avgNet: 0,
+    };
+    existing.monthCount += 1;
+    existing.totalGross += totals.grossPay;
+    existing.totalNet += totals.netPay;
+    byYear.set(year, existing);
+  }
+
+  return Array.from(byYear.values())
+    .map((y) => ({
+      ...y,
+      avgGross: y.monthCount ? y.totalGross / y.monthCount : 0,
+      avgNet: y.monthCount ? y.totalNet / y.monthCount : 0,
+    }))
+    .sort((a, b) => (a.year < b.year ? 1 : -1));
+}

@@ -8,7 +8,7 @@ import {
   fetchLeaveBalances,
 } from "@/lib/repo/salary";
 import { fetchStockTrades } from "@/lib/repo/stocks";
-import { summarizeSalaryRecord } from "@/lib/calc/salary";
+import { summarizeSalaryRecord, summarizeYearlySalary } from "@/lib/calc/salary";
 import { summarizeStockTrades } from "@/lib/calc/stock";
 import { formatCurrency, formatYearMonth } from "@/lib/format";
 import type {
@@ -57,6 +57,10 @@ export default function DashboardPage() {
   }, [currentRecord, overtimeEntries, thisMonth]);
 
   const stockSummary = useMemo(() => summarizeStockTrades(trades), [trades]);
+  const yearlySalary = useMemo(
+    () => summarizeYearlySalary(records, overtimeEntries),
+    [records, overtimeEntries]
+  );
 
   if (loading) return <p className="text-sm text-slate-400">載入中…</p>;
 
@@ -106,6 +110,46 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <h2 className="text-sm font-semibold text-slate-700">年度薪資統計</h2>
+        {yearlySalary.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-400">尚無薪資紀錄</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
+                  <th className="py-2 pr-3">年度</th>
+                  <th className="py-2 pr-3">月數</th>
+                  <th className="py-2 pr-3">實發總額</th>
+                  <th className="py-2 pr-3">平均月薪 (實發)</th>
+                  <th className="py-2 pr-3">應發總額</th>
+                </tr>
+              </thead>
+              <tbody>
+                {yearlySalary.map((y) => (
+                  <tr key={y.year} className="border-b border-slate-100">
+                    <td className="py-2 pr-3 font-medium text-slate-800">
+                      {y.year}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-500">{y.monthCount}</td>
+                    <td className="py-2 pr-3 font-semibold text-slate-900">
+                      {formatCurrency(y.totalNet)}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-700">
+                      {formatCurrency(y.avgNet)}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-400">
+                      {formatCurrency(y.totalGross)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between">
