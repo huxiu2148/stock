@@ -35,6 +35,19 @@ export function baseSalaryTotal(record: {
   );
 }
 
+/** 時薪試算基礎：底薪組成 + 考績獎金（不含獎金、三節獎金）。 */
+export function hourlyWageBase(record: {
+  base_basic: number;
+  base_position: number;
+  base_meal: number;
+  base_other: number;
+  base_other_allowance: number;
+  base_night_shift: number;
+  performance_bonus: number;
+}): number {
+  return baseSalaryTotal(record) + record.performance_bonus;
+}
+
 export function deductionsTotal(record: {
   deduct_welfare: number;
   deduct_labor_insurance: number;
@@ -93,7 +106,7 @@ export function summarizeSalaryRecord(
 ): SalaryTotals {
   const baseSalary = baseSalaryTotal(record);
   const deductions = deductionsTotal(record);
-  const hourlyWage = record.hourly_wage ?? estimateHourlyWage(baseSalary);
+  const hourlyWage = record.hourly_wage ?? estimateHourlyWage(hourlyWageBase(record));
   const overtime = summarizeOvertime(overtimeEntries, hourlyWage);
   const leave = summarizeLeaveDeduction(
     leaveEntries as { minutes: number; leave_type: LeaveType }[],

@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/format";
 import { formatMinutes } from "@/lib/calc/time";
 import { computeOvertimePay, estimateHourlyWage } from "@/lib/calc/overtime";
 import type { OvertimeEntry, SalaryRecord } from "@/types/database";
-import { baseSalaryTotal } from "@/lib/calc/salary";
+import { hourlyWageBase } from "@/lib/calc/salary";
 
 interface OvertimeSectionProps {
   record: SalaryRecord;
@@ -32,7 +32,7 @@ export function OvertimeSection({
   onClearOverride,
 }: OvertimeSectionProps) {
   const hourlyWage =
-    record.hourly_wage ?? estimateHourlyWage(baseSalaryTotal(record));
+    record.hourly_wage ?? estimateHourlyWage(hourlyWageBase(record));
 
   const rows = entries.map((e) => ({
     entry: e,
