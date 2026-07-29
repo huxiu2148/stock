@@ -32,6 +32,7 @@ function currentYearMonth(): string {
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [records, setRecords] = useState<SalaryRecord[]>([]);
   const [overtimeEntries, setOvertimeEntries] = useState<OvertimeEntry[]>([]);
   const [leaveEntries, setLeaveEntries] = useState<LeaveEntry[]>([]);
@@ -41,21 +42,32 @@ export default function DashboardPage() {
 
   useEffect(() => {
     (async () => {
-      const [rec, ot, late, leave, settings, stockTrades] = await Promise.all([
-        fetchSalaryRecords(),
-        fetchOvertimeEntries(),
-        fetchLateEntries(),
-        fetchLeaveEntries(),
-        fetchUserSettings(),
-        fetchStockTrades(),
-      ]);
-      setRecords(rec);
-      setOvertimeEntries(ot);
-      setLateEntries(late);
-      setLeaveEntries(leave);
-      setHireDate(settings?.hire_date ?? null);
-      setTrades(stockTrades);
-      setLoading(false);
+      try {
+        const [rec, ot, late, leave, stockTrades] = await Promise.all([
+          fetchSalaryRecords(),
+          fetchOvertimeEntries(),
+          fetchLateEntries(),
+          fetchLeaveEntries(),
+          fetchStockTrades(),
+        ]);
+        setRecords(rec);
+        setOvertimeEntries(ot);
+        setLateEntries(late);
+        setLeaveEntries(leave);
+        setTrades(stockTrades);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "資料載入失敗");
+      } finally {
+        setLoading(false);
+      }
+
+      // 到職日設定失敗（例如尚未執行 user_settings 的 migration）不應該擋住其他資料。
+      try {
+        const settings = await fetchUserSettings();
+        setHireDate(settings?.hire_date ?? null);
+      } catch {
+        setHireDate(null);
+      }
     })();
   }, []);
 
@@ -90,6 +102,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-600">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
           href="/salary"

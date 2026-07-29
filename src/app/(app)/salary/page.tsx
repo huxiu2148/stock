@@ -90,22 +90,28 @@ export default function SalaryPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [rec, ot, late, leave, settings] = await Promise.all([
+        const [rec, ot, late, leave] = await Promise.all([
           fetchSalaryRecords(),
           fetchOvertimeEntries(),
           fetchLateEntries(),
           fetchLeaveEntries(),
-          fetchUserSettings(),
         ]);
         setRecords(rec);
         setOvertimeEntries(ot);
         setLateEntries(late);
         setLeaveEntries(leave);
-        setHireDate(settings?.hire_date ?? null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "資料載入失敗");
       } finally {
         setLoading(false);
+      }
+
+      // 到職日設定失敗（例如尚未執行 user_settings 的 migration）不應該擋住其他資料。
+      try {
+        const settings = await fetchUserSettings();
+        setHireDate(settings?.hire_date ?? null);
+      } catch {
+        setHireDate(null);
       }
     })();
   }, []);
