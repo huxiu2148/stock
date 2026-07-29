@@ -75,15 +75,6 @@ export interface LeaveEntry extends TimeEntryBase {
   leave_type: LeaveType;
 }
 
-export interface LeaveBalance {
-  id: string;
-  user_id: string;
-  leave_type: LeaveType;
-  remaining_days: number;
-  as_of_note: string | null;
-  updated_at: string;
-}
-
 export type Market = "TW" | "US";
 export type Currency = "TWD" | "USD";
 

@@ -5,7 +5,6 @@ import type {
   OvertimeEntry,
   LateEntry,
   LeaveEntry,
-  LeaveBalance,
   LeaveType,
 } from "@/types/database";
 
@@ -159,34 +158,3 @@ export async function deleteLeaveEntry(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function fetchLeaveBalances(): Promise<LeaveBalance[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase.from("leave_balances").select("*");
-  if (error) throw error;
-  return data ?? [];
-}
-
-export async function upsertLeaveBalance(
-  leaveType: LeaveType,
-  remainingDays: number,
-  asOfNote?: string | null
-): Promise<LeaveBalance> {
-  const supabase = createClient();
-  const user_id = await currentUserId();
-  const { data, error } = await supabase
-    .from("leave_balances")
-    .upsert(
-      {
-        user_id,
-        leave_type: leaveType,
-        remaining_days: remainingDays,
-        as_of_note: asOfNote ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,leave_type" }
-    )
-    .select("*")
-    .single();
-  if (error) throw error;
-  return data;
-}

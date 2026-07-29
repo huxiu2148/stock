@@ -14,12 +14,10 @@ import {
   fetchLeaveEntries,
   addLeaveEntry,
   deleteLeaveEntry,
-  fetchLeaveBalances,
-  upsertLeaveBalance,
 } from "@/lib/repo/salary";
+import { fetchUserSettings, upsertHireDate } from "@/lib/repo/settings";
 import type {
   LateEntry,
-  LeaveBalance,
   LeaveEntry,
   LeaveType,
   OvertimeEntry,
@@ -85,25 +83,25 @@ export default function SalaryPage() {
   const [overtimeEntries, setOvertimeEntries] = useState<OvertimeEntry[]>([]);
   const [lateEntries, setLateEntries] = useState<LateEntry[]>([]);
   const [leaveEntries, setLeaveEntries] = useState<LeaveEntry[]>([]);
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [hireDate, setHireDate] = useState<string | null>(null);
   const [extraMonths, setExtraMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(currentYearMonth());
 
   useEffect(() => {
     (async () => {
       try {
-        const [rec, ot, late, leave, balances] = await Promise.all([
+        const [rec, ot, late, leave, settings] = await Promise.all([
           fetchSalaryRecords(),
           fetchOvertimeEntries(),
           fetchLateEntries(),
           fetchLeaveEntries(),
-          fetchLeaveBalances(),
+          fetchUserSettings(),
         ]);
         setRecords(rec);
         setOvertimeEntries(ot);
         setLateEntries(late);
         setLeaveEntries(leave);
-        setLeaveBalances(balances);
+        setHireDate(settings?.hire_date ?? null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "資料載入失敗");
       } finally {
@@ -212,16 +210,13 @@ export default function SalaryPage() {
     setLeaveEntries((prev) => [saved, ...prev]);
   }
 
-  async function handleSaveBalance(
-    leaveType: LeaveType,
-    days: number,
-    note: string
-  ) {
-    const saved = await upsertLeaveBalance(leaveType, days, note);
-    setLeaveBalances((prev) => [
-      ...prev.filter((b) => b.leave_type !== leaveType),
-      saved,
-    ]);
+  async function handleSaveHireDate(date: string) {
+    try {
+      const saved = await upsertHireDate(date);
+      setHireDate(saved.hire_date);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "儲存失敗");
+    }
   }
 
   if (loading) {
@@ -302,7 +297,11 @@ export default function SalaryPage() {
         }
       />
 
-      <LeaveBalanceSection balances={leaveBalances} onSave={handleSaveBalance} />
+      <LeaveBalanceSection
+        leaveEntries={leaveEntries}
+        hireDate={hireDate}
+        onSaveHireDate={handleSaveHireDate}
+      />
     </div>
   );
 }

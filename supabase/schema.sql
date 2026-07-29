@@ -102,6 +102,15 @@ create table if not exists leave_balances (
 );
 
 -- ============================================================
+-- 使用者設定 (到職日，用於自動計算特休天數)
+-- ============================================================
+create table if not exists user_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  hire_date date,
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
 -- 股票交易紀錄
 -- ============================================================
 create table if not exists stock_trades (
@@ -143,12 +152,13 @@ alter table late_entries enable row level security;
 alter table leave_entries enable row level security;
 alter table leave_balances enable row level security;
 alter table stock_trades enable row level security;
+alter table user_settings enable row level security;
 
 do $$
 declare
   t text;
 begin
-  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades']
+  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades','user_settings']
   loop
     execute format('drop policy if exists "select_own" on %I', t);
     execute format('create policy "select_own" on %I for select using (auth.uid() = user_id)', t);

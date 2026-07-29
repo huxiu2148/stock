@@ -7,15 +7,18 @@ import {
   fetchOvertimeEntries,
   fetchLateEntries,
   fetchLeaveEntries,
-  fetchLeaveBalances,
 } from "@/lib/repo/salary";
+import { fetchUserSettings } from "@/lib/repo/settings";
 import { fetchStockTrades } from "@/lib/repo/stocks";
 import { summarizeSalaryRecord, summarizeYearlySalary } from "@/lib/calc/salary";
+import {
+  computeAnnualLeaveBalance,
+  computeMenstrualLeaveBalance,
+} from "@/lib/calc/leaveBalance";
 import { summarizeStockTrades } from "@/lib/calc/stock";
 import { formatCurrency, formatYearMonth } from "@/lib/format";
 import type {
   LateEntry,
-  LeaveBalance,
   LeaveEntry,
   OvertimeEntry,
   SalaryRecord,
@@ -33,24 +36,24 @@ export default function DashboardPage() {
   const [overtimeEntries, setOvertimeEntries] = useState<OvertimeEntry[]>([]);
   const [leaveEntries, setLeaveEntries] = useState<LeaveEntry[]>([]);
   const [lateEntries, setLateEntries] = useState<LateEntry[]>([]);
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [hireDate, setHireDate] = useState<string | null>(null);
   const [trades, setTrades] = useState<StockTrade[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [rec, ot, late, leave, balances, stockTrades] = await Promise.all([
+      const [rec, ot, late, leave, settings, stockTrades] = await Promise.all([
         fetchSalaryRecords(),
         fetchOvertimeEntries(),
         fetchLateEntries(),
         fetchLeaveEntries(),
-        fetchLeaveBalances(),
+        fetchUserSettings(),
         fetchStockTrades(),
       ]);
       setRecords(rec);
       setOvertimeEntries(ot);
       setLateEntries(late);
       setLeaveEntries(leave);
-      setLeaveBalances(balances);
+      setHireDate(settings?.hire_date ?? null);
       setTrades(stockTrades);
       setLoading(false);
     })();
@@ -67,6 +70,15 @@ export default function DashboardPage() {
     const late = lateEntries.filter((e) => e.work_date.startsWith(thisMonth));
     return summarizeSalaryRecord(currentRecord, entries, leave, late);
   }, [currentRecord, overtimeEntries, leaveEntries, lateEntries, thisMonth]);
+
+  const annualLeaveBalance = useMemo(
+    () => computeAnnualLeaveBalance(hireDate, leaveEntries),
+    [hireDate, leaveEntries]
+  );
+  const menstrualLeaveBalance = useMemo(
+    () => computeMenstrualLeaveBalance(leaveEntries),
+    [leaveEntries]
+  );
 
   const stockSummary = useMemo(() => summarizeStockTrades(trades), [trades]);
   const yearlySalary = useMemo(
@@ -176,25 +188,35 @@ export default function DashboardPage() {
             管理 →
           </Link>
         </div>
-        {leaveBalances.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-400">尚未設定假別剩餘天數</p>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {leaveBalances.map((b) => (
-              <div key={b.id} className="rounded-xl bg-rose-50 p-3">
-                <div className="text-xs font-medium text-rose-700">
-                  {b.leave_type}
-                </div>
-                <div className="text-lg font-bold text-rose-700">
-                  {b.remaining_days} 天
-                </div>
-                {b.as_of_note && (
-                  <div className="text-xs text-rose-400">{b.as_of_note}</div>
-                )}
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {annualLeaveBalance ? (
+            <div className="rounded-xl bg-rose-50 p-3">
+              <div className="text-xs font-medium text-rose-700">特休剩餘</div>
+              <div className="text-lg font-bold text-rose-700">
+                {Math.max(0, Math.round(annualLeaveBalance.remaining * 10) / 10)} 天
               </div>
-            ))}
+              <div className="text-xs text-rose-400">
+                總額 {annualLeaveBalance.quota} 天
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-700">
+              尚未設定到職日，無法計算特休。
+              <Link href="/salary" className="ml-1 underline">
+                去設定
+              </Link>
+            </div>
+          )}
+          <div className="rounded-xl bg-rose-50 p-3">
+            <div className="text-xs font-medium text-rose-700">生理假剩餘</div>
+            <div className="text-lg font-bold text-rose-700">
+              {Math.max(0, Math.round(menstrualLeaveBalance.remaining * 10) / 10)} 天
+            </div>
+            <div className="text-xs text-rose-400">
+              總額 {menstrualLeaveBalance.quota} 天
+            </div>
           </div>
-        )}
+        </div>
       </section>
     </div>
   );
