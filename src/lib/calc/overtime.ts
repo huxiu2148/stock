@@ -1,17 +1,19 @@
+import { minutesBetween, overlapMinutes } from "./time";
+
 /**
- * 加班費試算，依你的試算表註記：
- * 「2小有誤餐費(0.5小不算薪) 前2小:*1.34 後兩小:*1.67」
- *
- * - 未滿 30 分鐘不算薪，滿 30 分鐘後以 30 分鐘為單位無條件捨去計薪
- * - 實際加班達 2 小時（含）以上，補發誤餐費 100 元
+ * 加班費試算，依你確認過的實際規則：
+ * - 不會以 30 分鐘捨去，每一分鐘都算
+ * - 加班若持續到 19:10，19:10~19:40 算晚餐休息時間不算薪，
+ *   19:40 之後才繼續計算（跟中午休息排除的邏輯一樣）
+ * - 加班達 2 小時（含）以上，補發誤餐費 100 元
  * - 前 2 小時以時薪 *1.34 計，超過 2 小時的部分以 *1.67 計
  *
- * 這是台灣常見的加班費估算公式，僅供參考，金額仍可在畫面上手動覆寫。
+ * 僅供參考估算，金額仍可在畫面上手動覆寫。
  */
 export const MEAL_ALLOWANCE_THRESHOLD_MINUTES = 120;
 export const MEAL_ALLOWANCE_AMOUNT = 100;
-const UNPAID_MINUTES = 30;
-const ROUND_UNIT_MINUTES = 30;
+export const DINNER_BREAK_START = "19:10";
+export const DINNER_BREAK_END = "19:40";
 const FIRST_TIER_HOURS = 2;
 const FIRST_TIER_RATE = 1.34;
 const SECOND_TIER_RATE = 1.67;
@@ -28,19 +30,23 @@ export function estimateHourlyWage(monthlyBaseSalary: number): number {
   return monthlyBaseSalary / 30 / 8;
 }
 
-export function computeOvertimePay(
-  rawMinutes: number,
+export function computeOvertimePayForRange(
+  startTime: string,
+  endTime: string,
   hourlyWage: number
 ): OvertimePayResult {
+  const rawMinutes = minutesBetween(startTime, endTime);
   const mealAllowance =
     rawMinutes >= MEAL_ALLOWANCE_THRESHOLD_MINUTES ? MEAL_ALLOWANCE_AMOUNT : 0;
 
-  if (rawMinutes < UNPAID_MINUTES) {
-    return { payableMinutes: 0, pay: 0, mealAllowance };
-  }
+  const dinnerBreakOverlap = overlapMinutes(
+    startTime,
+    endTime,
+    DINNER_BREAK_START,
+    DINNER_BREAK_END
+  );
+  const payableMinutes = Math.max(0, rawMinutes - dinnerBreakOverlap);
 
-  const payableMinutes =
-    Math.floor(rawMinutes / ROUND_UNIT_MINUTES) * ROUND_UNIT_MINUTES;
   const hours = payableMinutes / 60;
   const firstTierHours = Math.min(hours, FIRST_TIER_HOURS);
   const secondTierHours = Math.max(hours - FIRST_TIER_HOURS, 0);

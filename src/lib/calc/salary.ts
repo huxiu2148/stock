@@ -1,5 +1,5 @@
 import type { LateEntry, LeaveEntry, LeaveType, SalaryRecord } from "@/types/database";
-import { computeOvertimePay, estimateHourlyWage } from "./overtime";
+import { computeOvertimePayForRange, estimateHourlyWage } from "./overtime";
 import { summarizeLeaveDeduction } from "./leave";
 import type { OvertimeEntry } from "@/types/database";
 
@@ -74,12 +74,16 @@ export interface OvertimeSummary {
 }
 
 export function summarizeOvertime(
-  entries: Pick<OvertimeEntry, "minutes">[],
+  entries: Pick<OvertimeEntry, "minutes" | "start_time" | "end_time">[],
   hourlyWage: number
 ): OvertimeSummary {
   return entries.reduce<OvertimeSummary>(
     (acc, e) => {
-      const { pay, mealAllowance } = computeOvertimePay(e.minutes, hourlyWage);
+      const { pay, mealAllowance } = computeOvertimePayForRange(
+        e.start_time,
+        e.end_time,
+        hourlyWage
+      );
       return {
         totalMinutes: acc.totalMinutes + e.minutes,
         totalPay: acc.totalPay + pay,
@@ -103,7 +107,7 @@ export interface SalaryTotals {
 
 export function summarizeSalaryRecord(
   record: SalaryRecord,
-  overtimeEntries: Pick<OvertimeEntry, "minutes">[],
+  overtimeEntries: Pick<OvertimeEntry, "minutes" | "start_time" | "end_time">[],
   leaveEntries: Pick<LeaveEntry, "minutes" | "leave_type">[] = [],
   lateEntries: Pick<LateEntry, "minutes">[] = []
 ): SalaryTotals {

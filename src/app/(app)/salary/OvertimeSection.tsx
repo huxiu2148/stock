@@ -4,7 +4,7 @@ import { TimeRangeForm } from "@/components/TimeRangeForm";
 import { MoneyInput } from "@/components/MoneyInput";
 import { formatCurrency } from "@/lib/format";
 import { formatMinutes, WORK_HOURS } from "@/lib/calc/time";
-import { computeOvertimePay, estimateHourlyWage } from "@/lib/calc/overtime";
+import { computeOvertimePayForRange, estimateHourlyWage } from "@/lib/calc/overtime";
 import type { OvertimeEntry, SalaryRecord } from "@/types/database";
 import { hourlyWageBase } from "@/lib/calc/salary";
 
@@ -38,7 +38,7 @@ export function OvertimeSection({
 
   const rows = entries.map((e) => ({
     entry: e,
-    calc: computeOvertimePay(e.minutes, hourlyWage),
+    calc: computeOvertimePayForRange(e.start_time, e.end_time, hourlyWage),
   }));
   const suggestedTotal = rows.reduce(
     (sum, r) => sum + r.calc.pay + r.calc.mealAllowance,
@@ -58,6 +58,9 @@ export function OvertimeSection({
           時薪試算 {formatCurrency(hourlyWage)}／小時
         </span>
       </div>
+      <p className="mt-1 text-xs text-slate-400">
+        每分鐘都計薪，若加班到 19:10 以後，19:10–19:40 視為晚餐休息不算薪。
+      </p>
 
       <div className="mt-3">
         <TimeRangeForm
