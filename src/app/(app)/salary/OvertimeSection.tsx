@@ -3,7 +3,7 @@
 import { TimeRangeForm } from "@/components/TimeRangeForm";
 import { MoneyInput } from "@/components/MoneyInput";
 import { formatCurrency } from "@/lib/format";
-import { formatMinutes } from "@/lib/calc/time";
+import { formatMinutes, WORK_HOURS } from "@/lib/calc/time";
 import { computeOvertimePay, estimateHourlyWage } from "@/lib/calc/overtime";
 import type { OvertimeEntry, SalaryRecord } from "@/types/database";
 import { hourlyWageBase } from "@/lib/calc/salary";
@@ -60,6 +60,7 @@ export function OvertimeSection({
           onSubmit={onAdd}
           submitLabel="新增加班"
           defaultDate={defaultDate}
+          defaultStartTime={WORK_HOURS.end}
         />
       </div>
 
