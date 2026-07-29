@@ -83,6 +83,27 @@ export async function addOvertimeEntry(entry: {
   return data;
 }
 
+export async function updateOvertimeEntry(
+  id: string,
+  entry: {
+    work_date: string;
+    start_time: string;
+    end_time: string;
+    minutes: number;
+    note?: string | null;
+  }
+): Promise<OvertimeEntry> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("overtime_entries")
+    .update(entry)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteOvertimeEntry(id: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("overtime_entries").delete().eq("id", id);
@@ -111,6 +132,27 @@ export async function addLateEntry(entry: {
   const { data, error } = await supabase
     .from("late_entries")
     .insert({ ...entry, user_id })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLateEntry(
+  id: string,
+  entry: {
+    work_date: string;
+    start_time: string;
+    end_time: string;
+    minutes: number;
+    note?: string | null;
+  }
+): Promise<LateEntry> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("late_entries")
+    .update(entry)
+    .eq("id", id)
     .select("*")
     .single();
   if (error) throw error;
@@ -146,6 +188,28 @@ export async function addLeaveEntry(entry: {
   const { data, error } = await supabase
     .from("leave_entries")
     .insert({ ...entry, user_id })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLeaveEntry(
+  id: string,
+  entry: {
+    work_date: string;
+    start_time: string;
+    end_time: string;
+    minutes: number;
+    leave_type: LeaveType;
+    note?: string | null;
+  }
+): Promise<LeaveEntry> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("leave_entries")
+    .update(entry)
+    .eq("id", id)
     .select("*")
     .single();
   if (error) throw error;

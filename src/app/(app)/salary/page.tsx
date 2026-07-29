@@ -7,12 +7,15 @@ import {
   deleteSalaryRecord,
   fetchOvertimeEntries,
   addOvertimeEntry,
+  updateOvertimeEntry,
   deleteOvertimeEntry,
   fetchLateEntries,
   addLateEntry,
+  updateLateEntry,
   deleteLateEntry,
   fetchLeaveEntries,
   addLeaveEntry,
+  updateLeaveEntry,
   deleteLeaveEntry,
 } from "@/lib/repo/salary";
 import { fetchUserSettings, upsertHireDate } from "@/lib/repo/settings";
@@ -194,6 +197,20 @@ export default function SalaryPage() {
     setOvertimeEntries((prev) => [saved, ...prev]);
   }
 
+  async function handleUpdateOvertime(
+    id: string,
+    entry: {
+      work_date: string;
+      start_time: string;
+      end_time: string;
+      minutes: number;
+      note?: string;
+    }
+  ) {
+    const saved = await updateOvertimeEntry(id, entry);
+    setOvertimeEntries((prev) => prev.map((e) => (e.id === id ? saved : e)));
+  }
+
   async function handleAddLate(entry: {
     work_date: string;
     start_time: string;
@@ -203,6 +220,20 @@ export default function SalaryPage() {
   }) {
     const saved = await addLateEntry(entry);
     setLateEntries((prev) => [saved, ...prev]);
+  }
+
+  async function handleUpdateLate(
+    id: string,
+    entry: {
+      work_date: string;
+      start_time: string;
+      end_time: string;
+      minutes: number;
+      note?: string;
+    }
+  ) {
+    const saved = await updateLateEntry(id, entry);
+    setLateEntries((prev) => prev.map((e) => (e.id === id ? saved : e)));
   }
 
   async function handleAddLeave(entry: {
@@ -215,6 +246,21 @@ export default function SalaryPage() {
   }) {
     const saved = await addLeaveEntry(entry);
     setLeaveEntries((prev) => [saved, ...prev]);
+  }
+
+  async function handleUpdateLeave(
+    id: string,
+    entry: {
+      work_date: string;
+      start_time: string;
+      end_time: string;
+      minutes: number;
+      leave_type: LeaveType;
+      note?: string;
+    }
+  ) {
+    const saved = await updateLeaveEntry(id, entry);
+    setLeaveEntries((prev) => prev.map((e) => (e.id === id ? saved : e)));
   }
 
   async function handleSaveHireDate(date: string) {
@@ -266,6 +312,7 @@ export default function SalaryPage() {
         entries={monthOvertimeEntries}
         defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddOvertime}
+        onUpdate={handleUpdateOvertime}
         onDelete={(id) =>
           deleteOvertimeEntry(id).then(() =>
             setOvertimeEntries((prev) => prev.filter((e) => e.id !== id))
@@ -283,6 +330,7 @@ export default function SalaryPage() {
         entries={monthLateEntries}
         defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddLate}
+        onUpdate={handleUpdateLate}
         onDelete={(id) =>
           deleteLateEntry(id).then(() =>
             setLateEntries((prev) => prev.filter((e) => e.id !== id))
@@ -294,6 +342,7 @@ export default function SalaryPage() {
         entries={monthLeaveEntries}
         defaultDate={defaultWorkDate(selectedMonth)}
         onAdd={handleAddLeave}
+        onUpdate={handleUpdateLeave}
         onDelete={(id) =>
           deleteLeaveEntry(id).then(() =>
             setLeaveEntries((prev) => prev.filter((e) => e.id !== id))

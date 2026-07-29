@@ -1,18 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import { TimeRangeForm } from "@/components/TimeRangeForm";
 import { formatMinutes, workMinutesBetween, WORK_HOURS } from "@/lib/calc/time";
 import type { LateEntry } from "@/types/database";
 
+interface LateEntryInput {
+  work_date: string;
+  start_time: string;
+  end_time: string;
+  minutes: number;
+  note?: string;
+}
+
 interface LateSectionProps {
   entries: LateEntry[];
-  onAdd: (entry: {
-    work_date: string;
-    start_time: string;
-    end_time: string;
-    minutes: number;
-    note?: string;
-  }) => Promise<void>;
+  onAdd: (entry: LateEntryInput) => Promise<void>;
+  onUpdate: (id: string, entry: LateEntryInput) => Promise<void>;
   onDelete: (id: string) => void;
   defaultDate?: string;
 }
@@ -20,9 +24,11 @@ interface LateSectionProps {
 export function LateSection({
   entries,
   onAdd,
+  onUpdate,
   onDelete,
   defaultDate,
 }: LateSectionProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const totalMinutes = entries.reduce((sum, e) => sum + e.minutes, 0);
 
   return (
@@ -46,31 +52,53 @@ export function LateSection({
 
       {entries.length > 0 && (
         <ul className="mt-4 divide-y divide-slate-100">
-          {entries.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-slate-700">{entry.work_date}</span>
-                <span className="text-slate-500">
-                  {entry.start_time}–{entry.end_time}
-                </span>
-                <span className="text-slate-400">
-                  {formatMinutes(entry.minutes)}
-                </span>
-                {entry.note && (
-                  <span className="text-slate-400">· {entry.note}</span>
-                )}
-              </div>
-              <button
-                onClick={() => onDelete(entry.id)}
-                className="text-xs text-slate-400 hover:text-rose-600"
+          {entries.map((entry) =>
+            editingId === entry.id ? (
+              <li key={entry.id} className="py-2">
+                <TimeRangeForm
+                  initial={entry}
+                  computeMinutes={workMinutesBetween}
+                  onCancel={() => setEditingId(null)}
+                  onSubmit={async (updated) => {
+                    await onUpdate(entry.id, updated);
+                    setEditingId(null);
+                  }}
+                />
+              </li>
+            ) : (
+              <li
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
               >
-                刪除
-              </button>
-            </li>
-          ))}
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-slate-700">{entry.work_date}</span>
+                  <span className="text-slate-500">
+                    {entry.start_time}–{entry.end_time}
+                  </span>
+                  <span className="text-slate-400">
+                    {formatMinutes(entry.minutes)}
+                  </span>
+                  {entry.note && (
+                    <span className="text-slate-400">· {entry.note}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setEditingId(entry.id)}
+                    className="text-xs text-slate-400 hover:text-slate-700"
+                  >
+                    編輯
+                  </button>
+                  <button
+                    onClick={() => onDelete(entry.id)}
+                    className="text-xs text-slate-400 hover:text-rose-600"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </li>
+            )
+          )}
         </ul>
       )}
     </section>

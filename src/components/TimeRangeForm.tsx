@@ -9,6 +9,13 @@ interface QuickFill {
   end: string;
 }
 
+interface TimeRangeFormInitial {
+  work_date: string;
+  start_time: string;
+  end_time: string;
+  note?: string | null;
+}
+
 interface TimeRangeFormProps {
   onSubmit: (entry: {
     work_date: string;
@@ -29,6 +36,10 @@ interface TimeRangeFormProps {
   durationHint?: string;
   /** 日期欄位的預設值，例如查看某個月份時預設帶當月第一天。 */
   defaultDate?: string;
+  /** 提供既有值以編輯現有紀錄，而非新增。 */
+  initial?: TimeRangeFormInitial;
+  /** 編輯模式下的取消按鈕。 */
+  onCancel?: () => void;
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -36,22 +47,29 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 export function TimeRangeForm({
   onSubmit,
   extraFields,
-  submitLabel = "新增紀錄",
+  submitLabel,
   computeMinutes = minutesBetween,
   defaultStartTime = "",
   quickFill,
   durationHint,
   defaultDate,
+  initial,
+  onCancel,
 }: TimeRangeFormProps) {
-  const [workDate, setWorkDate] = useState(defaultDate ?? todayStr());
-  const [startTime, setStartTime] = useState(defaultStartTime);
-  const [endTime, setEndTime] = useState("");
-  const [note, setNote] = useState("");
+  const isEditing = Boolean(initial);
+  const [workDate, setWorkDate] = useState(
+    initial?.work_date ?? defaultDate ?? todayStr()
+  );
+  const [startTime, setStartTime] = useState(
+    initial?.start_time ?? defaultStartTime
+  );
+  const [endTime, setEndTime] = useState(initial?.end_time ?? "");
+  const [note, setNote] = useState(initial?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [prevDefaultDate, setPrevDefaultDate] = useState(defaultDate);
 
   // 換月份時 defaultDate 會變，這裡直接在 render 期間同步，不用 remount 整個表單。
-  if (defaultDate !== prevDefaultDate) {
+  if (!isEditing && defaultDate !== prevDefaultDate) {
     setPrevDefaultDate(defaultDate);
     setWorkDate(defaultDate ?? todayStr());
   }
@@ -73,9 +91,11 @@ export function TimeRangeForm({
         minutes,
         note: note.trim() || undefined,
       });
-      setStartTime(defaultStartTime);
-      setEndTime("");
-      setNote("");
+      if (!isEditing) {
+        setStartTime(defaultStartTime);
+        setEndTime("");
+        setNote("");
+      }
     } finally {
       setSaving(false);
     }
@@ -144,13 +164,24 @@ export function TimeRangeForm({
             ? `${formatMinutes(minutes)}${durationHint ? `（${durationHint}）` : ""}`
             : " "}
         </span>
-        <button
-          type="submit"
-          disabled={saving || minutes <= 0}
-          className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
-        >
-          {saving ? "儲存中…" : submitLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="submit"
+            disabled={saving || minutes <= 0}
+            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
+          >
+            {saving ? "儲存中…" : submitLabel ?? (isEditing ? "儲存變更" : "新增紀錄")}
+          </button>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
+            >
+              取消
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );

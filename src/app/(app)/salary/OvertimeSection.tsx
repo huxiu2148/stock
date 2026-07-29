@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TimeRangeForm } from "@/components/TimeRangeForm";
 import { MoneyInput } from "@/components/MoneyInput";
 import { formatCurrency } from "@/lib/format";
@@ -8,16 +9,19 @@ import { computeOvertimePayForRange, estimateHourlyWage } from "@/lib/calc/overt
 import type { OvertimeEntry, SalaryRecord } from "@/types/database";
 import { hourlyWageBase } from "@/lib/calc/salary";
 
+interface OvertimeEntryInput {
+  work_date: string;
+  start_time: string;
+  end_time: string;
+  minutes: number;
+  note?: string;
+}
+
 interface OvertimeSectionProps {
   record: SalaryRecord;
   entries: OvertimeEntry[];
-  onAdd: (entry: {
-    work_date: string;
-    start_time: string;
-    end_time: string;
-    minutes: number;
-    note?: string;
-  }) => Promise<void>;
+  onAdd: (entry: OvertimeEntryInput) => Promise<void>;
+  onUpdate: (id: string, entry: OvertimeEntryInput) => Promise<void>;
   onDelete: (id: string) => void;
   onOverrideChange: (value: number) => void;
   onClearOverride: () => void;
@@ -28,11 +32,13 @@ export function OvertimeSection({
   record,
   entries,
   onAdd,
+  onUpdate,
   onDelete,
   onOverrideChange,
   onClearOverride,
   defaultDate,
 }: OvertimeSectionProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const hourlyWage =
     record.hourly_wage ?? estimateHourlyWage(hourlyWageBase(record));
 
@@ -73,45 +79,65 @@ export function OvertimeSection({
 
       {rows.length > 0 && (
         <ul className="mt-4 divide-y divide-slate-100">
-          {rows.map(({ entry, calc }) => (
-            <li
-              key={entry.id}
-              className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-slate-700">{entry.work_date}</span>
-                <span className="text-slate-500">
-                  {entry.start_time}–{entry.end_time}
-                </span>
-                <span className="text-slate-400">
-                  {formatMinutes(entry.minutes)}
-                </span>
-                <span className="text-slate-400">
-                  （試算 {(calc.payableMinutes / 60).toFixed(2)} 小時）
-                </span>
-                {entry.note && (
-                  <span className="text-slate-400">· {entry.note}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-600">
-                  {formatCurrency(calc.pay)}
-                  {calc.mealAllowance > 0 && (
-                    <span className="text-slate-400">
-                      {" "}
-                      +誤餐 {formatCurrency(calc.mealAllowance)}
-                    </span>
+          {rows.map(({ entry, calc }) =>
+            editingId === entry.id ? (
+              <li key={entry.id} className="py-2">
+                <TimeRangeForm
+                  initial={entry}
+                  defaultStartTime={WORK_HOURS.end}
+                  onCancel={() => setEditingId(null)}
+                  onSubmit={async (updated) => {
+                    await onUpdate(entry.id, updated);
+                    setEditingId(null);
+                  }}
+                />
+              </li>
+            ) : (
+              <li
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-slate-700">{entry.work_date}</span>
+                  <span className="text-slate-500">
+                    {entry.start_time}–{entry.end_time}
+                  </span>
+                  <span className="text-slate-400">
+                    {formatMinutes(entry.minutes)}
+                  </span>
+                  <span className="text-slate-400">
+                    （試算 {(calc.payableMinutes / 60).toFixed(2)} 小時）
+                  </span>
+                  {entry.note && (
+                    <span className="text-slate-400">· {entry.note}</span>
                   )}
-                </span>
-                <button
-                  onClick={() => onDelete(entry.id)}
-                  className="text-xs text-slate-400 hover:text-rose-600"
-                >
-                  刪除
-                </button>
-              </div>
-            </li>
-          ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-600">
+                    {formatCurrency(calc.pay)}
+                    {calc.mealAllowance > 0 && (
+                      <span className="text-slate-400">
+                        {" "}
+                        +誤餐 {formatCurrency(calc.mealAllowance)}
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => setEditingId(entry.id)}
+                    className="text-xs text-slate-400 hover:text-slate-700"
+                  >
+                    編輯
+                  </button>
+                  <button
+                    onClick={() => onDelete(entry.id)}
+                    className="text-xs text-slate-400 hover:text-rose-600"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </li>
+            )
+          )}
         </ul>
       )}
 
