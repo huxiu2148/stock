@@ -22,6 +22,8 @@ create table if not exists salary_records (
 
   performance_bonus numeric not null default 0,     -- 考績獎金
   bonus numeric not null default 0,                 -- 獎金 (misc / year-end etc.)
+  festival_bonus numeric not null default 0,        -- 三節獎金
+  festival_bonus_note text,                         -- 三節獎金備註 (中秋/端午/春節...)
 
   -- 扣除項目 (固定欄位)
   deduct_welfare numeric not null default 0,             -- 福利金

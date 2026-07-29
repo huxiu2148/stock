@@ -1,6 +1,7 @@
 "use client";
 
 import { MoneyInput } from "@/components/MoneyInput";
+import { TextInput } from "@/components/TextInput";
 import { formatCurrency } from "@/lib/format";
 import { baseSalaryTotal } from "@/lib/calc/salary";
 import type { SalaryRecord } from "@/types/database";
@@ -24,11 +25,19 @@ export function BaseSalarySection({ record, onChange }: BaseSalarySectionProps) 
 
   return (
     <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-slate-700">底薪組成</h2>
         <span className="text-sm text-slate-500">
           底薪合計 <b className="text-slate-900">{formatCurrency(total)}</b>
         </span>
+      </div>
+      <div className="mt-3 sm:w-1/3">
+        <TextInput
+          label="備註"
+          value={record.note ?? ""}
+          placeholder="這個月有什麼要記的嗎？"
+          onCommit={(v) => onChange({ note: v || null })}
+        />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {FIELDS.map((f) => (
@@ -41,7 +50,7 @@ export function BaseSalarySection({ record, onChange }: BaseSalarySectionProps) 
         ))}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:w-2/3">
+      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-4">
         <MoneyInput
           label="考績獎金"
           value={record.performance_bonus}
@@ -51,6 +60,17 @@ export function BaseSalarySection({ record, onChange }: BaseSalarySectionProps) 
           label="獎金"
           value={record.bonus}
           onCommit={(v) => onChange({ bonus: v })}
+        />
+        <MoneyInput
+          label="三節獎金"
+          value={record.festival_bonus}
+          onCommit={(v) => onChange({ festival_bonus: v })}
+        />
+        <TextInput
+          label="三節獎金備註"
+          value={record.festival_bonus_note ?? ""}
+          placeholder="中秋 / 端午 / 春節…"
+          onCommit={(v) => onChange({ festival_bonus_note: v || null })}
         />
       </div>
     </section>

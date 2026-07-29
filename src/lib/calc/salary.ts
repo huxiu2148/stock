@@ -82,7 +82,11 @@ export function summarizeSalaryRecord(
     overtime.totalPay + overtime.totalMealAllowance;
 
   const grossPay =
-    baseSalary + record.performance_bonus + record.bonus + overtimeTotal;
+    baseSalary +
+    record.performance_bonus +
+    record.bonus +
+    record.festival_bonus +
+    overtimeTotal;
   const netPay = grossPay - deductions;
 
   return {

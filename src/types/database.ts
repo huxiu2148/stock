@@ -32,6 +32,8 @@ export interface SalaryRecord {
 
   performance_bonus: number;
   bonus: number;
+  festival_bonus: number;
+  festival_bonus_note: string | null;
 
   deduct_welfare: number;
   deduct_labor_insurance: number;
