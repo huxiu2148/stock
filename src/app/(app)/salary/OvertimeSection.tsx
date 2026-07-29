@@ -51,7 +51,7 @@ export function OvertimeSection({
     0
   );
   const totalPayableHours = rows.reduce(
-    (sum, r) => sum + r.calc.payableMinutes / 60,
+    (sum, r) => sum + r.calc.payableHours,
     0
   );
   const usingOverride = record.overtime_pay_override != null;
@@ -106,7 +106,7 @@ export function OvertimeSection({
                     {formatMinutes(entry.minutes)}
                   </span>
                   <span className="text-slate-400">
-                    （試算 {(calc.payableMinutes / 60).toFixed(2)} 小時）
+                    （試算 {calc.payableHours.toFixed(2)} 小時）
                   </span>
                   {entry.note && (
                     <span className="text-slate-400">· {entry.note}</span>

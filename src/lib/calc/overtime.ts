@@ -5,6 +5,8 @@ import { minutesBetween, overlapMinutes } from "./time";
  * - 不會以 30 分鐘捨去，每一分鐘都算
  * - 加班若持續到 19:10，19:10~19:40 算晚餐休息時間不算薪，
  *   19:40 之後才繼續計算（跟中午休息排除的邏輯一樣）
+ * - 時數會先換算成小時、四捨五入到小數點後兩位（比照公司系統的時數記錄方式），
+ *   才拿這個時數去算錢
  * - 加班達 2 小時（含）以上，補發誤餐費 100 元
  * - 前 2 小時以時薪 *1.34 計，超過 2 小時的部分以 *1.67 計
  *
@@ -20,6 +22,8 @@ const SECOND_TIER_RATE = 1.67;
 
 export interface OvertimePayResult {
   payableMinutes: number;
+  /** 已四捨五入到小數點後兩位的時數，實際用來計算加班費的時數。 */
+  payableHours: number;
   /** 精確金額（未四捨五入），供加總多筆紀錄後統一在畫面上捨入一次，避免誤差累積。 */
   pay: number;
   mealAllowance: number;
@@ -47,14 +51,14 @@ export function computeOvertimePayForRange(
     DINNER_BREAK_END
   );
   const payableMinutes = Math.max(0, rawMinutes - dinnerBreakOverlap);
+  const payableHours = Math.round((payableMinutes / 60) * 100) / 100;
 
-  const hours = payableMinutes / 60;
-  const firstTierHours = Math.min(hours, FIRST_TIER_HOURS);
-  const secondTierHours = Math.max(hours - FIRST_TIER_HOURS, 0);
+  const firstTierHours = Math.min(payableHours, FIRST_TIER_HOURS);
+  const secondTierHours = Math.max(payableHours - FIRST_TIER_HOURS, 0);
 
   const pay =
     hourlyWage * firstTierHours * FIRST_TIER_RATE +
     hourlyWage * secondTierHours * SECOND_TIER_RATE;
 
-  return { payableMinutes, pay, mealAllowance };
+  return { payableMinutes, payableHours, pay, mealAllowance };
 }
