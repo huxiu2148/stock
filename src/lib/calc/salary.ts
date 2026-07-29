@@ -24,6 +24,7 @@ export function baseSalaryTotal(record: {
   base_other: number;
   base_other_allowance: number;
   base_night_shift: number;
+  base_evaluation_bonus: number;
 }): number {
   return (
     record.base_basic +
@@ -31,7 +32,8 @@ export function baseSalaryTotal(record: {
     record.base_meal +
     record.base_other +
     record.base_other_allowance +
-    record.base_night_shift
+    record.base_night_shift +
+    record.base_evaluation_bonus
   );
 }
 
@@ -43,6 +45,7 @@ export function hourlyWageBase(record: {
   base_other: number;
   base_other_allowance: number;
   base_night_shift: number;
+  base_evaluation_bonus: number;
   performance_bonus: number;
 }): number {
   return baseSalaryTotal(record) + record.performance_bonus;

@@ -12,15 +12,16 @@ create table if not exists salary_records (
   year_month text not null,                -- e.g. '2025-07'
   pay_date date,                           -- 發薪日
 
-  -- 底薪組成 (順序: 基本底薪, 職務加給, 伙食費, 其他, 其他加給, 夜班津貼)
+  -- 底薪組成 (順序: 基本底薪, 職務加給, 伙食費, 其他, 其他加給, 夜班津貼, 考核獎金)
   base_basic numeric not null default 0,           -- 基本底薪
   base_position numeric not null default 0,        -- 職務加給
   base_meal numeric not null default 0,             -- 伙食費
   base_other numeric not null default 0,            -- 其他
   base_other_allowance numeric not null default 0,  -- 其他加給
   base_night_shift numeric not null default 0,      -- 夜班津貼
+  base_evaluation_bonus numeric not null default 0, -- 考核獎金 (併入底薪/薪資合計小計)
 
-  performance_bonus numeric not null default 0,     -- 考績獎金
+  performance_bonus numeric not null default 0,     -- 考績獎金 (單獨列在底薪小計之後)
   bonus numeric not null default 0,                 -- 獎金 (misc / year-end etc.)
   festival_bonus numeric not null default 0,        -- 三節獎金
   festival_bonus_note text,                         -- 三節獎金備註 (中秋/端午/春節...)

@@ -18,6 +18,7 @@ const FIELDS: { key: keyof SalaryRecord; label: string }[] = [
   { key: "base_other", label: "其他" },
   { key: "base_other_allowance", label: "其他加給" },
   { key: "base_night_shift", label: "夜班津貼" },
+  { key: "base_evaluation_bonus", label: "考核獎金" },
 ];
 
 export function BaseSalarySection({ record, onChange }: BaseSalarySectionProps) {

@@ -59,6 +59,7 @@ function draftRecord(yearMonth: string): SalaryRecord {
     base_other: 0,
     base_other_allowance: 0,
     base_night_shift: 0,
+    base_evaluation_bonus: 0,
     performance_bonus: 0,
     bonus: 0,
     festival_bonus: 0,

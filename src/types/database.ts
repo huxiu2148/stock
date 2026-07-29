@@ -31,6 +31,7 @@ export interface SalaryRecord {
   base_other: number;
   base_other_allowance: number;
   base_night_shift: number;
+  base_evaluation_bonus: number;
 
   performance_bonus: number;
   bonus: number;
