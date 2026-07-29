@@ -225,6 +225,8 @@ export default function SalaryPage() {
 
       <BaseSalarySection record={currentRecord} onChange={handleRecordChange} />
 
+      <DeductionsSection record={currentRecord} onChange={handleRecordChange} />
+
       <OvertimeSection
         record={currentRecord}
         entries={monthOvertimeEntries}
@@ -263,8 +265,6 @@ export default function SalaryPage() {
       />
 
       <LeaveBalanceSection balances={leaveBalances} onSave={handleSaveBalance} />
-
-      <DeductionsSection record={currentRecord} onChange={handleRecordChange} />
     </div>
   );
 }
