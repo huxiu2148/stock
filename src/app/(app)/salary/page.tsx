@@ -223,6 +223,7 @@ export default function SalaryPage() {
         record={currentRecord}
         overtimeEntries={monthOvertimeEntries}
         leaveEntries={monthLeaveEntries}
+        lateEntries={monthLateEntries}
         onPayDateChange={(date) => handleRecordChange({ pay_date: date })}
       />
 

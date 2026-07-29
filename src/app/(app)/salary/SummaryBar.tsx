@@ -2,12 +2,18 @@
 
 import { formatCurrency } from "@/lib/format";
 import { summarizeSalaryRecord } from "@/lib/calc/salary";
-import type { LeaveEntry, OvertimeEntry, SalaryRecord } from "@/types/database";
+import type {
+  LateEntry,
+  LeaveEntry,
+  OvertimeEntry,
+  SalaryRecord,
+} from "@/types/database";
 
 interface SummaryBarProps {
   record: SalaryRecord;
   overtimeEntries: OvertimeEntry[];
   leaveEntries: LeaveEntry[];
+  lateEntries: LateEntry[];
   onPayDateChange: (date: string) => void;
 }
 
@@ -15,9 +21,15 @@ export function SummaryBar({
   record,
   overtimeEntries,
   leaveEntries,
+  lateEntries,
   onPayDateChange,
 }: SummaryBarProps) {
-  const totals = summarizeSalaryRecord(record, overtimeEntries, leaveEntries);
+  const totals = summarizeSalaryRecord(
+    record,
+    overtimeEntries,
+    leaveEntries,
+    lateEntries
+  );
 
   return (
     <section className="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
@@ -49,6 +61,14 @@ export function SummaryBar({
               <div className="text-slate-400">請假扣款</div>
               <div className="text-lg font-semibold text-rose-300">
                 -{formatCurrency(totals.leaveDeduction)}
+              </div>
+            </div>
+          )}
+          {totals.lateDeduction > 0 && (
+            <div>
+              <div className="text-slate-400">遲到扣款</div>
+              <div className="text-lg font-semibold text-rose-300">
+                -{formatCurrency(totals.lateDeduction)}
               </div>
             </div>
           )}

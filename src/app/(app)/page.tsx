@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   fetchSalaryRecords,
   fetchOvertimeEntries,
+  fetchLateEntries,
   fetchLeaveEntries,
   fetchLeaveBalances,
 } from "@/lib/repo/salary";
@@ -13,6 +14,7 @@ import { summarizeSalaryRecord, summarizeYearlySalary } from "@/lib/calc/salary"
 import { summarizeStockTrades } from "@/lib/calc/stock";
 import { formatCurrency, formatYearMonth } from "@/lib/format";
 import type {
+  LateEntry,
   LeaveBalance,
   LeaveEntry,
   OvertimeEntry,
@@ -30,20 +32,23 @@ export default function DashboardPage() {
   const [records, setRecords] = useState<SalaryRecord[]>([]);
   const [overtimeEntries, setOvertimeEntries] = useState<OvertimeEntry[]>([]);
   const [leaveEntries, setLeaveEntries] = useState<LeaveEntry[]>([]);
+  const [lateEntries, setLateEntries] = useState<LateEntry[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [trades, setTrades] = useState<StockTrade[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [rec, ot, leave, balances, stockTrades] = await Promise.all([
+      const [rec, ot, late, leave, balances, stockTrades] = await Promise.all([
         fetchSalaryRecords(),
         fetchOvertimeEntries(),
+        fetchLateEntries(),
         fetchLeaveEntries(),
         fetchLeaveBalances(),
         fetchStockTrades(),
       ]);
       setRecords(rec);
       setOvertimeEntries(ot);
+      setLateEntries(late);
       setLeaveEntries(leave);
       setLeaveBalances(balances);
       setTrades(stockTrades);
@@ -59,13 +64,14 @@ export default function DashboardPage() {
       e.work_date.startsWith(thisMonth)
     );
     const leave = leaveEntries.filter((e) => e.work_date.startsWith(thisMonth));
-    return summarizeSalaryRecord(currentRecord, entries, leave);
-  }, [currentRecord, overtimeEntries, leaveEntries, thisMonth]);
+    const late = lateEntries.filter((e) => e.work_date.startsWith(thisMonth));
+    return summarizeSalaryRecord(currentRecord, entries, leave, late);
+  }, [currentRecord, overtimeEntries, leaveEntries, lateEntries, thisMonth]);
 
   const stockSummary = useMemo(() => summarizeStockTrades(trades), [trades]);
   const yearlySalary = useMemo(
-    () => summarizeYearlySalary(records, overtimeEntries, leaveEntries),
-    [records, overtimeEntries, leaveEntries]
+    () => summarizeYearlySalary(records, overtimeEntries, leaveEntries, lateEntries),
+    [records, overtimeEntries, leaveEntries, lateEntries]
   );
 
   if (loading) return <p className="text-sm text-slate-400">載入中…</p>;
@@ -90,6 +96,9 @@ export default function DashboardPage() {
                 {formatCurrency(currentTotals.deductions)}
                 {currentTotals.leaveDeduction > 0 && (
                   <> · 請假扣款 {formatCurrency(currentTotals.leaveDeduction)}</>
+                )}
+                {currentTotals.lateDeduction > 0 && (
+                  <> · 遲到扣款 {formatCurrency(currentTotals.lateDeduction)}</>
                 )}
               </div>
             </>

@@ -1,7 +1,21 @@
-import type { LeaveEntry, LeaveType, SalaryRecord } from "@/types/database";
+import type { LateEntry, LeaveEntry, LeaveType, SalaryRecord } from "@/types/database";
 import { computeOvertimePay, estimateHourlyWage } from "./overtime";
 import { summarizeLeaveDeduction } from "./leave";
 import type { OvertimeEntry } from "@/types/database";
+
+/** 遲到扣款：全額依時薪比例扣，時薪=底薪/30/8。 */
+export function summarizeLateDeduction(
+  entries: Pick<LateEntry, "minutes">[],
+  hourlyWage: number
+): { totalMinutes: number; totalDeduction: number } {
+  return entries.reduce(
+    (acc, e) => ({
+      totalMinutes: acc.totalMinutes + e.minutes,
+      totalDeduction: acc.totalDeduction + Math.round((e.minutes / 60) * hourlyWage),
+    }),
+    { totalMinutes: 0, totalDeduction: 0 }
+  );
+}
 
 export function baseSalaryTotal(record: {
   base_basic: number;
@@ -66,6 +80,7 @@ export interface SalaryTotals {
   overtimePay: number;
   mealAllowance: number;
   leaveDeduction: number;
+  lateDeduction: number;
   grossPay: number;
   netPay: number;
 }
@@ -73,7 +88,8 @@ export interface SalaryTotals {
 export function summarizeSalaryRecord(
   record: SalaryRecord,
   overtimeEntries: Pick<OvertimeEntry, "minutes">[],
-  leaveEntries: Pick<LeaveEntry, "minutes" | "leave_type">[] = []
+  leaveEntries: Pick<LeaveEntry, "minutes" | "leave_type">[] = [],
+  lateEntries: Pick<LateEntry, "minutes">[] = []
 ): SalaryTotals {
   const baseSalary = baseSalaryTotal(record);
   const deductions = deductionsTotal(record);
@@ -83,6 +99,7 @@ export function summarizeSalaryRecord(
     leaveEntries as { minutes: number; leave_type: LeaveType }[],
     hourlyWage
   );
+  const late = summarizeLateDeduction(lateEntries, hourlyWage);
 
   const overtimeTotal =
     record.overtime_pay_override ??
@@ -94,7 +111,7 @@ export function summarizeSalaryRecord(
     record.bonus +
     record.festival_bonus +
     overtimeTotal;
-  const netPay = grossPay - deductions - leave.totalDeduction;
+  const netPay = grossPay - deductions - leave.totalDeduction - late.totalDeduction;
 
   return {
     baseSalary,
@@ -102,6 +119,7 @@ export function summarizeSalaryRecord(
     overtimePay: overtime.totalPay,
     mealAllowance: overtime.totalMealAllowance,
     leaveDeduction: leave.totalDeduction,
+    lateDeduction: late.totalDeduction,
     grossPay,
     netPay,
   };
@@ -119,7 +137,8 @@ export interface YearlySalarySummary {
 export function summarizeYearlySalary(
   records: SalaryRecord[],
   overtimeEntries: OvertimeEntry[],
-  leaveEntries: LeaveEntry[] = []
+  leaveEntries: LeaveEntry[] = [],
+  lateEntries: LateEntry[] = []
 ): YearlySalarySummary[] {
   const byYear = new Map<string, YearlySalarySummary>();
 
@@ -131,7 +150,15 @@ export function summarizeYearlySalary(
     const monthLeaveEntries = leaveEntries.filter((e) =>
       e.work_date.startsWith(record.year_month)
     );
-    const totals = summarizeSalaryRecord(record, entries, monthLeaveEntries);
+    const monthLateEntries = lateEntries.filter((e) =>
+      e.work_date.startsWith(record.year_month)
+    );
+    const totals = summarizeSalaryRecord(
+      record,
+      entries,
+      monthLeaveEntries,
+      monthLateEntries
+    );
 
     const existing = byYear.get(year) ?? {
       year,
