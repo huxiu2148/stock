@@ -8,10 +8,13 @@ import {
   updateStockTrade,
   deleteStockTrade,
 } from "@/lib/repo/stocks";
-import { summarizeStockTrades } from "@/lib/calc/stock";
+import {
+  summarizeStockTrades,
+  splitPartialSell,
+  splitMergedSellFees,
+} from "@/lib/calc/stock";
 import { formatCurrency } from "@/lib/format";
 import type { Market, StockTrade } from "@/types/database";
-import { splitPartialSell } from "@/lib/calc/stock";
 import { StockForm } from "./StockForm";
 import { StockTable } from "./StockTable";
 
@@ -171,6 +174,27 @@ export default function StocksPage() {
                 created,
                 ...prev.map((t) => (t.id === trade.id ? updatedRemaining : t)),
               ]);
+            }}
+            onMergeSell={async (mergeTrades, sold) => {
+              const allocations = splitMergedSellFees(
+                mergeTrades,
+                sold.fee_sell,
+                sold.tax
+              );
+              const updated = await Promise.all(
+                allocations.map((a) =>
+                  updateStockTrade(a.tradeId, {
+                    sell_date: sold.sell_date,
+                    actual_sell_price: sold.actual_sell_price,
+                    fee_sell: a.fee_sell,
+                    tax: a.tax,
+                  })
+                )
+              );
+              setTrades((prev) => {
+                const updatedById = new Map(updated.map((t) => [t.id, t]));
+                return prev.map((t) => updatedById.get(t.id) ?? t);
+              });
             }}
           />
         </div>

@@ -98,6 +98,44 @@ export function splitPartialSell(
   };
 }
 
+export interface MergeSellAllocation {
+  tradeId: string;
+  fee_sell: number;
+  tax: number;
+}
+
+/**
+ * 合併賣出：多筆不同批次買進的持股，一次用同一個賣出價賣掉。
+ * 這次交易的手續費、交易稅按各筆股數佔總股數的比例分攤到每一筆，
+ * 最後一筆吃捨入誤差，確保分攤後加總跟原本輸入的總額一致。
+ */
+export function splitMergedSellFees(
+  trades: Pick<StockTrade, "id" | "shares">[],
+  totalFeeSell: number,
+  totalTax: number
+): MergeSellAllocation[] {
+  const totalShares = trades.reduce((sum, t) => sum + t.shares, 0);
+  if (totalShares <= 0) {
+    return trades.map((t) => ({ tradeId: t.id, fee_sell: 0, tax: 0 }));
+  }
+
+  let allocatedFee = 0;
+  let allocatedTax = 0;
+
+  return trades.map((t, i) => {
+    const isLast = i === trades.length - 1;
+    const fee = isLast
+      ? totalFeeSell - allocatedFee
+      : Math.round(totalFeeSell * (t.shares / totalShares));
+    const tax = isLast
+      ? totalTax - allocatedTax
+      : Math.round(totalTax * (t.shares / totalShares));
+    allocatedFee += fee;
+    allocatedTax += tax;
+    return { tradeId: t.id, fee_sell: fee, tax };
+  });
+}
+
 export interface StockPortfolioSummary {
   realizedGainTwd: number;
   openPositions: number;
