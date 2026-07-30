@@ -1,5 +1,17 @@
 import type { StockTrade, StockTradeInput } from "@/types/database";
 
+/**
+ * 排序：有賣出日的（已賣出）優先排在前面，同一組再依買進日新到舊排序。
+ */
+export function sortStockTrades(trades: StockTrade[]): StockTrade[] {
+  return [...trades].sort((a, b) => {
+    const aClosed = a.sell_date != null;
+    const bClosed = b.sell_date != null;
+    if (aClosed !== bClosed) return aClosed ? -1 : 1;
+    return b.buy_date.localeCompare(a.buy_date);
+  });
+}
+
 export interface StockTradeCalc {
   isClosed: boolean;
   costNative: number;

@@ -12,6 +12,7 @@ import {
   summarizeStockTrades,
   splitPartialSell,
   splitMergedSellFees,
+  sortStockTrades,
 } from "@/lib/calc/stock";
 import { formatCurrency } from "@/lib/format";
 import type { Market, StockTrade } from "@/types/database";
@@ -54,10 +55,10 @@ export default function StocksPage() {
     return map;
   }, [trades]);
 
-  const filtered = useMemo(
-    () => (tab === "ALL" ? trades : trades.filter((t) => t.market === tab)),
-    [trades, tab]
-  );
+  const filtered = useMemo(() => {
+    const scoped = tab === "ALL" ? trades : trades.filter((t) => t.market === tab);
+    return sortStockTrades(scoped);
+  }, [trades, tab]);
 
   const summary = useMemo(() => summarizeStockTrades(filtered), [filtered]);
 
