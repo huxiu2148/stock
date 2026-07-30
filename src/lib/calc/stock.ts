@@ -110,41 +110,59 @@ export function splitPartialSell(
   };
 }
 
-export interface MergeSellAllocation {
+export interface MergeSellLineInput {
   tradeId: string;
-  fee_sell: number;
-  tax: number;
+  /** 這筆要賣出的股數，可以小於該筆持有股數（部分賣出）。 */
+  soldShares: number;
+}
+
+export interface MergeSellPlanItem {
+  trade: StockTrade;
+  soldShares: number;
+  feeSellShare: number;
+  taxShare: number;
+  /** true = 這筆全部賣出（直接更新即可）；false = 部分賣出（需要拆成兩筆）。 */
+  isFullSell: boolean;
 }
 
 /**
- * 合併賣出：多筆不同批次買進的持股，一次用同一個賣出價賣掉。
- * 這次交易的手續費、交易稅按各筆股數佔總股數的比例分攤到每一筆，
+ * 合併賣出：多筆不同批次買進的持股，一次用同一個賣出價賣掉，
+ * 每一筆可以只賣出部分股數（例如買20股+10股，只賣掉合計24股）。
+ * 這次交易的手續費、交易稅依「各筆實際賣出股數」佔「總賣出股數」的比例分攤，
  * 最後一筆吃捨入誤差，確保分攤後加總跟原本輸入的總額一致。
  */
-export function splitMergedSellFees(
-  trades: Pick<StockTrade, "id" | "shares">[],
+export function planMergeSell(
+  trades: StockTrade[],
+  lines: MergeSellLineInput[],
   totalFeeSell: number,
   totalTax: number
-): MergeSellAllocation[] {
-  const totalShares = trades.reduce((sum, t) => sum + t.shares, 0);
-  if (totalShares <= 0) {
-    return trades.map((t) => ({ tradeId: t.id, fee_sell: 0, tax: 0 }));
-  }
+): MergeSellPlanItem[] {
+  const byId = new Map(trades.map((t) => [t.id, t]));
+  const activeLines = lines.filter((l) => l.soldShares > 0);
+  const totalSoldShares = activeLines.reduce((sum, l) => sum + l.soldShares, 0);
 
   let allocatedFee = 0;
   let allocatedTax = 0;
 
-  return trades.map((t, i) => {
-    const isLast = i === trades.length - 1;
-    const fee = isLast
+  return activeLines.map((line, i) => {
+    const trade = byId.get(line.tradeId)!;
+    const isLast = i === activeLines.length - 1;
+    const feeSellShare = isLast
       ? totalFeeSell - allocatedFee
-      : Math.round(totalFeeSell * (t.shares / totalShares));
-    const tax = isLast
+      : Math.round(totalFeeSell * (line.soldShares / totalSoldShares));
+    const taxShare = isLast
       ? totalTax - allocatedTax
-      : Math.round(totalTax * (t.shares / totalShares));
-    allocatedFee += fee;
-    allocatedTax += tax;
-    return { tradeId: t.id, fee_sell: fee, tax };
+      : Math.round(totalTax * (line.soldShares / totalSoldShares));
+    allocatedFee += feeSellShare;
+    allocatedTax += taxShare;
+
+    return {
+      trade,
+      soldShares: line.soldShares,
+      feeSellShare,
+      taxShare,
+      isFullSell: line.soldShares >= trade.shares,
+    };
   });
 }
 

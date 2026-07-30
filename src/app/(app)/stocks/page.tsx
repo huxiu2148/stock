@@ -11,7 +11,7 @@ import {
 import {
   summarizeStockTrades,
   splitPartialSell,
-  splitMergedSellFees,
+  planMergeSell,
   sortStockTrades,
 } from "@/lib/calc/stock";
 import { formatCurrency } from "@/lib/format";
@@ -176,26 +176,50 @@ export default function StocksPage() {
                 ...prev.map((t) => (t.id === trade.id ? updatedRemaining : t)),
               ]);
             }}
-            onMergeSell={async (mergeTrades, sold) => {
-              const allocations = splitMergedSellFees(
+            onMergeSell={async (mergeTrades, lines, sold) => {
+              const plan = planMergeSell(
                 mergeTrades,
+                lines,
                 sold.fee_sell,
                 sold.tax
               );
-              const updated = await Promise.all(
-                allocations.map((a) =>
-                  updateStockTrade(a.tradeId, {
+
+              const updatedById = new Map<string, StockTrade>();
+              const created: StockTrade[] = [];
+
+              for (const item of plan) {
+                if (item.isFullSell) {
+                  const saved = await updateStockTrade(item.trade.id, {
                     sell_date: sold.sell_date,
                     actual_sell_price: sold.actual_sell_price,
-                    fee_sell: a.fee_sell,
-                    tax: a.tax,
-                  })
-                )
-              );
-              setTrades((prev) => {
-                const updatedById = new Map(updated.map((t) => [t.id, t]));
-                return prev.map((t) => updatedById.get(t.id) ?? t);
-              });
+                    fee_sell: item.feeSellShare,
+                    tax: item.taxShare,
+                  });
+                  updatedById.set(saved.id, saved);
+                } else {
+                  const { remainingPatch, soldTrade } = splitPartialSell(
+                    item.trade,
+                    {
+                      shares: item.soldShares,
+                      sell_date: sold.sell_date,
+                      actual_sell_price: sold.actual_sell_price,
+                      fee_sell: item.feeSellShare,
+                      tax: item.taxShare,
+                    }
+                  );
+                  const updatedRemaining = await updateStockTrade(
+                    item.trade.id,
+                    remainingPatch
+                  );
+                  updatedById.set(updatedRemaining.id, updatedRemaining);
+                  created.push(await createStockTrade(soldTrade));
+                }
+              }
+
+              setTrades((prev) => [
+                ...created,
+                ...prev.map((t) => updatedById.get(t.id) ?? t),
+              ]);
             }}
           />
         </div>

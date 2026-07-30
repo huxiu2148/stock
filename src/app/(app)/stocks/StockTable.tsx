@@ -21,6 +21,7 @@ interface StockTableProps {
   onPartialSell: (trade: StockTrade, sold: SellInput) => Promise<void>;
   onMergeSell: (
     trades: StockTrade[],
+    lines: { tradeId: string; soldShares: number }[],
     sold: {
       sell_date: string;
       actual_sell_price: number;
@@ -165,24 +166,40 @@ function MergeSellForm({
 }: {
   trades: StockTrade[];
   onCancel: () => void;
-  onSubmit: (sold: {
-    sell_date: string;
-    actual_sell_price: number;
-    fee_sell: number;
-    tax: number;
-  }) => Promise<void>;
+  onSubmit: (
+    lines: { tradeId: string; soldShares: number }[],
+    sold: {
+      sell_date: string;
+      actual_sell_price: number;
+      fee_sell: number;
+      tax: number;
+    }
+  ) => Promise<void>;
 }) {
   const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10));
   const [actualSellPrice, setActualSellPrice] = useState("");
   const [feeSell, setFeeSell] = useState("0");
   const [tax, setTax] = useState("0");
+  const [soldSharesById, setSoldSharesById] = useState<Record<string, string>>(
+    () => Object.fromEntries(trades.map((t) => [t.id, String(t.shares)]))
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalShares = trades.reduce((sum, t) => sum + t.shares, 0);
   const symbols = Array.from(new Set(trades.map((t) => t.symbol)));
   const sameSymbol = symbols.length === 1;
-  const valid = sameSymbol && actualSellPrice.trim() !== "";
+
+  const lines = trades.map((t) => ({
+    tradeId: t.id,
+    soldShares: Number(soldSharesById[t.id] ?? 0) || 0,
+  }));
+  const totalSoldShares = lines.reduce((sum, l) => sum + l.soldShares, 0);
+  const linesValid = trades.every((t) => {
+    const v = Number(soldSharesById[t.id] ?? 0) || 0;
+    return v >= 0 && v <= t.shares;
+  });
+  const valid =
+    sameSymbol && actualSellPrice.trim() !== "" && totalSoldShares > 0 && linesValid;
 
   const inputCls =
     "rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
@@ -195,12 +212,15 @@ function MergeSellForm({
     setSaving(true);
     setError(null);
     try {
-      await onSubmit({
-        sell_date: sellDate,
-        actual_sell_price: Number(actualSellPrice),
-        fee_sell: Number(feeSell) || 0,
-        tax: Number(tax) || 0,
-      });
+      await onSubmit(
+        lines.filter((l) => l.soldShares > 0),
+        {
+          sell_date: sellDate,
+          actual_sell_price: Number(actualSellPrice),
+          fee_sell: Number(feeSell) || 0,
+          tax: Number(tax) || 0,
+        }
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "儲存失敗");
     } finally {
@@ -214,14 +234,42 @@ function MergeSellForm({
       className="grid grid-cols-2 gap-3 rounded-xl bg-amber-50 p-4 sm:grid-cols-4"
     >
       <p className="col-span-2 text-xs text-slate-600 sm:col-span-4">
-        合併賣出 {trades.length} 筆（{symbols.join("、")}），共 {totalShares} 股。
-        手續費、交易稅會依各筆股數比例分攤。
+        合併賣出 {trades.length} 筆（{symbols.join("、")}），可分別調整每筆要賣出的股數
+        （不用整筆賣完），手續費、交易稅會依實際賣出股數比例分攤。
       </p>
       {!sameSymbol && (
         <p className="col-span-2 text-xs text-rose-600 sm:col-span-4">
           勾選的紀錄代碼不一致，請只勾同一支股票的紀錄。
         </p>
       )}
+
+      <div className="col-span-2 space-y-2 sm:col-span-4">
+        {trades.map((t) => (
+          <div
+            key={t.id}
+            className="flex flex-wrap items-center gap-2 rounded-lg bg-white px-3 py-2"
+          >
+            <span className="text-xs text-slate-500">
+              {t.buy_date} 買進，持有 {t.shares} 股
+            </span>
+            <label className="ml-auto flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">賣出股數</span>
+              <input
+                type="number"
+                min={0}
+                max={t.shares}
+                value={soldSharesById[t.id] ?? ""}
+                onChange={(e) =>
+                  setSoldSharesById((prev) => ({ ...prev, [t.id]: e.target.value }))
+                }
+                className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              />
+            </label>
+          </div>
+        ))}
+        <p className="text-xs text-slate-400">合計賣出 {totalSoldShares} 股</p>
+      </div>
+
       <label className={labelCls}>
         <span className={capCls}>賣出日</span>
         <input
@@ -346,8 +394,8 @@ export function StockTable({
           <MergeSellForm
             trades={selectedTrades}
             onCancel={() => setShowMergeForm(false)}
-            onSubmit={async (sold) => {
-              await onMergeSell(selectedTrades, sold);
+            onSubmit={async (lines, sold) => {
+              await onMergeSell(selectedTrades, lines, sold);
               setSelectedIds(new Set());
               setShowMergeForm(false);
             }}
