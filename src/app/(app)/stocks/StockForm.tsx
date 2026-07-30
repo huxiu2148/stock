@@ -27,6 +27,14 @@ function numOrNull(v: string): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+/** 理想賣出價 = 買進價 * 1.05（5% 目標獲利），四捨五入到小數點後兩位。 */
+const TARGET_SELL_MARKUP = 1.05;
+function suggestedTargetSellPrice(buyPriceStr: string): string {
+  const buy = Number(buyPriceStr);
+  if (!buyPriceStr || Number.isNaN(buy) || buy <= 0) return "";
+  return (Math.round(buy * TARGET_SELL_MARKUP * 100) / 100).toString();
+}
+
 export function StockForm({
   initial,
   onSubmit,
@@ -48,6 +56,9 @@ export function StockForm({
   const [buyPrice, setBuyPrice] = useState(field(initial?.buy_price));
   const [targetSellPrice, setTargetSellPrice] = useState(
     field(initial?.target_sell_price)
+  );
+  const [targetSellPriceTouched, setTargetSellPriceTouched] = useState(
+    Boolean(initial?.target_sell_price)
   );
   const [actualSellPrice, setActualSellPrice] = useState(
     field(initial?.actual_sell_price)
@@ -199,7 +210,13 @@ export function StockForm({
           type="number"
           step="0.01"
           value={buyPrice}
-          onChange={(e) => setBuyPrice(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setBuyPrice(next);
+            if (!targetSellPriceTouched) {
+              setTargetSellPrice(suggestedTargetSellPrice(next));
+            }
+          }}
           required
           className={inputCls}
         />
@@ -211,7 +228,11 @@ export function StockForm({
           type="number"
           step="0.01"
           value={targetSellPrice}
-          onChange={(e) => setTargetSellPrice(e.target.value)}
+          onChange={(e) => {
+            setTargetSellPrice(e.target.value);
+            setTargetSellPriceTouched(true);
+          }}
+          placeholder="自動帶入買進價*1.05"
           className={inputCls}
         />
       </label>
