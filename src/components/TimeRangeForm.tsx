@@ -40,6 +40,12 @@ interface TimeRangeFormProps {
   initial?: TimeRangeFormInitial;
   /** 編輯模式下的取消按鈕。 */
   onCancel?: () => void;
+  /** 結束時間欄位的上限，例如遲到最多只能記到 08:40（超過要改請假）。 */
+  endTimeMax?: string;
+  /** 超過這個分鐘數就擋下並顯示 maxMinutesMessage，不能送出。 */
+  maxMinutes?: number;
+  /** 超過 maxMinutes 時顯示的提示文字。 */
+  maxMinutesMessage?: string;
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -55,6 +61,9 @@ export function TimeRangeForm({
   defaultDate,
   initial,
   onCancel,
+  endTimeMax,
+  maxMinutes,
+  maxMinutesMessage,
 }: TimeRangeFormProps) {
   const isEditing = Boolean(initial);
   const [workDate, setWorkDate] = useState(
@@ -78,10 +87,11 @@ export function TimeRangeForm({
     () => (startTime && endTime ? computeMinutes(startTime, endTime) : 0),
     [startTime, endTime, computeMinutes]
   );
+  const exceedsMax = maxMinutes != null && minutes > maxMinutes;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startTime || !endTime || minutes <= 0) return;
+    if (!startTime || !endTime || minutes <= 0 || exceedsMax) return;
     setSaving(true);
     try {
       await onSubmit({
@@ -131,6 +141,7 @@ export function TimeRangeForm({
         <input
           type="time"
           value={endTime}
+          max={endTimeMax}
           onChange={(e) => setEndTime(e.target.value)}
           required
           className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
@@ -159,15 +170,17 @@ export function TimeRangeForm({
         />
       </label>
       <div className="flex flex-col items-start gap-1">
-        <span className="text-xs text-slate-400">
-          {minutes > 0
+        <span className={`text-xs ${exceedsMax ? "text-rose-600" : "text-slate-400"}`}>
+          {exceedsMax
+            ? maxMinutesMessage ?? "超過上限，請改用其他紀錄方式"
+            : minutes > 0
             ? `${formatMinutes(minutes)}${durationHint ? `（${durationHint}）` : ""}`
             : " "}
         </span>
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            disabled={saving || minutes <= 0}
+            disabled={saving || minutes <= 0 || exceedsMax}
             className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
           >
             {saving ? "儲存中…" : submitLabel ?? (isEditing ? "儲存變更" : "新增紀錄")}

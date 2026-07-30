@@ -21,6 +21,10 @@ interface LateSectionProps {
   defaultDate?: string;
 }
 
+// 遲到超過 30 分鐘公司規定要改請假，08:10 開始所以結束時間最晚只能到 08:40。
+const LATE_MAX_MINUTES = 30;
+const LATE_END_TIME_MAX = "08:40";
+
 export function LateSection({
   entries,
   onAdd,
@@ -47,6 +51,9 @@ export function LateSection({
           defaultStartTime={WORK_HOURS.start}
           computeMinutes={workMinutesBetween}
           defaultDate={defaultDate}
+          endTimeMax={LATE_END_TIME_MAX}
+          maxMinutes={LATE_MAX_MINUTES}
+          maxMinutesMessage="遲到超過30分鐘請改用「請假紀錄」申請"
         />
       </div>
 
@@ -58,6 +65,9 @@ export function LateSection({
                 <TimeRangeForm
                   initial={entry}
                   computeMinutes={workMinutesBetween}
+                  endTimeMax={LATE_END_TIME_MAX}
+                  maxMinutes={LATE_MAX_MINUTES}
+                  maxMinutesMessage="遲到超過30分鐘請改用「請假紀錄」申請"
                   onCancel={() => setEditingId(null)}
                   onSubmit={async (updated) => {
                     await onUpdate(entry.id, updated);
