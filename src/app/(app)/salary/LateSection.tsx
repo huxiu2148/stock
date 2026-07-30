@@ -49,6 +49,7 @@ export function LateSection({
           onSubmit={onAdd}
           submitLabel="新增遲到"
           defaultStartTime={WORK_HOURS.start}
+          defaultEndTime={WORK_HOURS.start}
           computeMinutes={workMinutesBetween}
           defaultDate={defaultDate}
           endTimeMax={LATE_END_TIME_MAX}

@@ -30,6 +30,8 @@ interface TimeRangeFormProps {
   computeMinutes?: (start: string, end: string) => number;
   /** 開始時間欄位的預設值，例如遲到紀錄可預設為正常上班時間。 */
   defaultStartTime?: string;
+  /** 結束時間欄位的預設值，讓小時/上下午先帶好，只需要改分鐘。 */
+  defaultEndTime?: string;
   /** 快捷按鈕，例如請假選「全天」直接帶入上下班時間。 */
   quickFill?: QuickFill;
   /** 時長旁的補充說明，例如提醒已扣除午休時間。 */
@@ -58,6 +60,7 @@ export function TimeRangeForm({
   submitLabel,
   computeMinutes = minutesBetween,
   defaultStartTime = "",
+  defaultEndTime = "",
   quickFill,
   durationHint,
   defaultDate,
@@ -75,7 +78,7 @@ export function TimeRangeForm({
   const [startTime, setStartTime] = useState(
     initial?.start_time ?? defaultStartTime
   );
-  const [endTime, setEndTime] = useState(initial?.end_time ?? "");
+  const [endTime, setEndTime] = useState(initial?.end_time ?? defaultEndTime);
   const [note, setNote] = useState(initial?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +111,7 @@ export function TimeRangeForm({
       });
       if (!isEditing) {
         setStartTime(defaultStartTime);
-        setEndTime("");
+        setEndTime(defaultEndTime);
         setNote("");
       }
     } catch (err) {
