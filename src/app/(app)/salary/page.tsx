@@ -191,6 +191,7 @@ export default function SalaryPage() {
     start_time: string;
     end_time: string;
     minutes: number;
+    is_holiday?: boolean;
     note?: string;
   }) {
     const saved = await addOvertimeEntry(entry);
@@ -204,6 +205,7 @@ export default function SalaryPage() {
       start_time: string;
       end_time: string;
       minutes: number;
+      is_holiday?: boolean;
       note?: string;
     }
   ) {

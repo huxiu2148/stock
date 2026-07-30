@@ -53,6 +53,7 @@ create table if not exists overtime_entries (
   start_time time not null,
   end_time time not null,
   minutes integer not null,       -- 自動換算
+  is_holiday boolean not null default false, -- 是否為國定假日出勤
   note text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -69,7 +69,9 @@ export interface TimeEntryBase {
   updated_at: string;
 }
 
-export type OvertimeEntry = TimeEntryBase;
+export interface OvertimeEntry extends TimeEntryBase {
+  is_holiday: boolean;
+}
 export type LateEntry = TimeEntryBase;
 
 export interface LeaveEntry extends TimeEntryBase {

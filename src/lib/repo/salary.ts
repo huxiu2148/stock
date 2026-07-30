@@ -70,6 +70,7 @@ export async function addOvertimeEntry(entry: {
   start_time: string;
   end_time: string;
   minutes: number;
+  is_holiday?: boolean;
   note?: string | null;
 }): Promise<OvertimeEntry> {
   const supabase = createClient();
@@ -90,6 +91,7 @@ export async function updateOvertimeEntry(
     start_time: string;
     end_time: string;
     minutes: number;
+    is_holiday?: boolean;
     note?: string | null;
   }
 ): Promise<OvertimeEntry> {

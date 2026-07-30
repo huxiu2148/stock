@@ -74,7 +74,7 @@ export interface OvertimeSummary {
 }
 
 export function summarizeOvertime(
-  entries: Pick<OvertimeEntry, "minutes" | "start_time" | "end_time">[],
+  entries: Pick<OvertimeEntry, "minutes" | "start_time" | "end_time" | "is_holiday">[],
   hourlyWage: number
 ): OvertimeSummary {
   return entries.reduce<OvertimeSummary>(
@@ -82,7 +82,8 @@ export function summarizeOvertime(
       const { pay, mealAllowance } = computeOvertimePayForRange(
         e.start_time,
         e.end_time,
-        hourlyWage
+        hourlyWage,
+        e.is_holiday
       );
       return {
         totalMinutes: acc.totalMinutes + e.minutes,
@@ -107,7 +108,7 @@ export interface SalaryTotals {
 
 export function summarizeSalaryRecord(
   record: SalaryRecord,
-  overtimeEntries: Pick<OvertimeEntry, "minutes" | "start_time" | "end_time">[],
+  overtimeEntries: Pick<OvertimeEntry, "minutes" | "start_time" | "end_time" | "is_holiday">[],
   leaveEntries: Pick<LeaveEntry, "minutes" | "leave_type">[] = [],
   lateEntries: Pick<LateEntry, "minutes">[] = []
 ): SalaryTotals {

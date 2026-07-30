@@ -14,6 +14,7 @@ interface OvertimeEntryInput {
   start_time: string;
   end_time: string;
   minutes: number;
+  is_holiday?: boolean;
   note?: string;
 }
 
@@ -28,6 +29,50 @@ interface OvertimeSectionProps {
   defaultDate?: string;
 }
 
+function HolidayCheckbox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-slate-500">&nbsp;</span>
+      <span className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        國定假日
+      </span>
+    </label>
+  );
+}
+
+function EditOvertimeEntryForm({
+  entry,
+  onSubmit,
+  onCancel,
+}: {
+  entry: OvertimeEntry;
+  onSubmit: (input: OvertimeEntryInput) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [isHoliday, setIsHoliday] = useState(entry.is_holiday);
+
+  return (
+    <TimeRangeForm
+      initial={entry}
+      defaultStartTime={WORK_HOURS.end}
+      onCancel={onCancel}
+      extraFields={<HolidayCheckbox checked={isHoliday} onChange={setIsHoliday} />}
+      onSubmit={(updated) => onSubmit({ ...updated, is_holiday: isHoliday })}
+    />
+  );
+}
+
 export function OvertimeSection({
   record,
   entries,
@@ -39,12 +84,13 @@ export function OvertimeSection({
   defaultDate,
 }: OvertimeSectionProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isHoliday, setIsHoliday] = useState(false);
   const hourlyWage =
     record.hourly_wage ?? estimateHourlyWage(hourlyWageBase(record));
 
   const rows = entries.map((e) => ({
     entry: e,
-    calc: computeOvertimePayForRange(e.start_time, e.end_time, hourlyWage),
+    calc: computeOvertimePayForRange(e.start_time, e.end_time, hourlyWage, e.is_holiday),
   }));
   const suggestedTotal = rows.reduce(
     (sum, r) => sum + r.calc.pay + r.calc.mealAllowance,
@@ -65,15 +111,19 @@ export function OvertimeSection({
         </span>
       </div>
       <p className="mt-1 text-xs text-slate-400">
-        每分鐘都計薪，若加班到 19:10 以後，19:10–19:40 視為晚餐休息不算薪。
+        每分鐘都計薪，若加班到 19:10 以後，19:10–19:40
+        視為晚餐休息不算薪。國定假日出勤依勞基法：前8小時*2倍、第9~10小時*1.34、第11~12小時*1.67，並扣除午休時間。
       </p>
 
       <div className="mt-3">
         <TimeRangeForm
-          onSubmit={onAdd}
+          onSubmit={(entry) => onAdd({ ...entry, is_holiday: isHoliday })}
           submitLabel="新增加班"
           defaultDate={defaultDate}
           defaultStartTime={WORK_HOURS.end}
+          extraFields={
+            <HolidayCheckbox checked={isHoliday} onChange={setIsHoliday} />
+          }
         />
       </div>
 
@@ -82,9 +132,8 @@ export function OvertimeSection({
           {rows.map(({ entry, calc }) =>
             editingId === entry.id ? (
               <li key={entry.id} className="py-2">
-                <TimeRangeForm
-                  initial={entry}
-                  defaultStartTime={WORK_HOURS.end}
+                <EditOvertimeEntryForm
+                  entry={entry}
                   onCancel={() => setEditingId(null)}
                   onSubmit={async (updated) => {
                     await onUpdate(entry.id, updated);
@@ -98,6 +147,11 @@ export function OvertimeSection({
                 className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
               >
                 <div className="flex flex-wrap items-center gap-3">
+                  {entry.is_holiday && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
+                      國定假日
+                    </span>
+                  )}
                   <span className="text-slate-700">{entry.work_date}</span>
                   <span className="text-slate-500">
                     {entry.start_time}–{entry.end_time}
