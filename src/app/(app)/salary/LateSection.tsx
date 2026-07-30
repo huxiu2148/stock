@@ -52,6 +52,7 @@ export function LateSection({
           computeMinutes={workMinutesBetween}
           defaultDate={defaultDate}
           endTimeMax={LATE_END_TIME_MAX}
+          endTimeMin={WORK_HOURS.start}
           maxMinutes={LATE_MAX_MINUTES}
           maxMinutesMessage="遲到超過30分鐘請改用「請假紀錄」申請"
         />

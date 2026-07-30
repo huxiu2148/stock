@@ -42,6 +42,8 @@ interface TimeRangeFormProps {
   onCancel?: () => void;
   /** 結束時間欄位的上限，例如遲到最多只能記到 08:40（超過要改請假）。 */
   endTimeMax?: string;
+  /** 結束時間欄位的下限，避免時間選擇器選到不合理的時段（如遲到選成下午）。 */
+  endTimeMin?: string;
   /** 超過這個分鐘數就擋下並顯示 maxMinutesMessage，不能送出。 */
   maxMinutes?: number;
   /** 超過 maxMinutes 時顯示的提示文字。 */
@@ -62,6 +64,7 @@ export function TimeRangeForm({
   initial,
   onCancel,
   endTimeMax,
+  endTimeMin,
   maxMinutes,
   maxMinutesMessage,
 }: TimeRangeFormProps) {
@@ -75,6 +78,7 @@ export function TimeRangeForm({
   const [endTime, setEndTime] = useState(initial?.end_time ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [prevDefaultDate, setPrevDefaultDate] = useState(defaultDate);
 
   // 換月份時 defaultDate 會變，這裡直接在 render 期間同步，不用 remount 整個表單。
@@ -93,6 +97,7 @@ export function TimeRangeForm({
     e.preventDefault();
     if (!startTime || !endTime || minutes <= 0 || exceedsMax) return;
     setSaving(true);
+    setError(null);
     try {
       await onSubmit({
         work_date: workDate,
@@ -106,6 +111,8 @@ export function TimeRangeForm({
         setEndTime("");
         setNote("");
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "儲存失敗");
     } finally {
       setSaving(false);
     }
@@ -142,6 +149,7 @@ export function TimeRangeForm({
           type="time"
           value={endTime}
           max={endTimeMax}
+          min={endTimeMin}
           onChange={(e) => setEndTime(e.target.value)}
           required
           className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
@@ -160,6 +168,7 @@ export function TimeRangeForm({
         </button>
       )}
       {extraFields}
+      {error && <p className="w-full text-xs text-rose-600">{error}</p>}
       <label className="flex flex-1 min-w-32 flex-col gap-1">
         <span className="text-xs font-medium text-slate-500">備註 (選填)</span>
         <input
