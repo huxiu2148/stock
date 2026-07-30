@@ -1,4 +1,4 @@
-import type { StockTrade } from "@/types/database";
+import type { StockTrade, StockTradeInput } from "@/types/database";
 
 export interface StockTradeCalc {
   isClosed: boolean;
@@ -42,6 +42,59 @@ export function computeStockTrade(trade: StockTrade): StockTradeCalc {
     proceedsTwd,
     gainTwd,
     returnPct: isClosed ? returnPct : null,
+  };
+}
+
+export interface PartialSellInput {
+  shares: number;
+  sell_date: string;
+  actual_sell_price: number;
+  fee_sell: number;
+  tax: number;
+}
+
+export interface PartialSellSplit {
+  /** 更新到原本那筆紀錄的內容：股數變少，買進手續費按比例扣掉已賣出的部分。 */
+  remainingPatch: Partial<StockTradeInput>;
+  /** 用來新增一筆「已賣出」紀錄的完整內容。 */
+  soldTrade: StockTradeInput;
+}
+
+/**
+ * 分批賣出：把一筆持股拆成「已賣出」與「剩餘持有」兩筆。
+ * 買進手續費按賣出股數佔總股數的比例分攤，避免整筆手續費被算兩次或算漏。
+ */
+export function splitPartialSell(
+  trade: StockTrade,
+  sold: PartialSellInput
+): PartialSellSplit {
+  const soldShares = Math.min(sold.shares, trade.shares);
+  const remainingShares = trade.shares - soldShares;
+  const soldFeeBuy = Math.round(trade.fee_buy * (soldShares / trade.shares));
+  const remainingFeeBuy = trade.fee_buy - soldFeeBuy;
+
+  const soldTrade: StockTradeInput = {
+    market: trade.market,
+    currency: trade.currency,
+    symbol: trade.symbol,
+    name: trade.name,
+    buy_date: trade.buy_date,
+    sell_date: sold.sell_date,
+    buy_price: trade.buy_price,
+    target_sell_price: trade.target_sell_price,
+    actual_sell_price: sold.actual_sell_price,
+    shares: soldShares,
+    fee_buy: soldFeeBuy,
+    fee_sell: sold.fee_sell,
+    tax: sold.tax,
+    exchange_rate_buy: trade.exchange_rate_buy,
+    exchange_rate_sell: trade.exchange_rate_sell,
+    note: trade.note,
+  };
+
+  return {
+    remainingPatch: { shares: remainingShares, fee_buy: remainingFeeBuy },
+    soldTrade,
   };
 }
 

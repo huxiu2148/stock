@@ -11,6 +11,7 @@ import {
 import { summarizeStockTrades } from "@/lib/calc/stock";
 import { formatCurrency } from "@/lib/format";
 import type { Market, StockTrade } from "@/types/database";
+import { splitPartialSell } from "@/lib/calc/stock";
 import { StockForm } from "./StockForm";
 import { StockTable } from "./StockTable";
 
@@ -145,6 +146,32 @@ export default function StocksPage() {
                 setTrades((prev) => prev.filter((t) => t.id !== id))
               )
             }
+            onPartialSell={async (trade, sold) => {
+              if (sold.shares >= trade.shares) {
+                // 全部賣出，不用拆成兩筆
+                const saved = await updateStockTrade(trade.id, {
+                  sell_date: sold.sell_date,
+                  actual_sell_price: sold.actual_sell_price,
+                  fee_sell: sold.fee_sell,
+                  tax: sold.tax,
+                });
+                setTrades((prev) =>
+                  prev.map((t) => (t.id === trade.id ? saved : t))
+                );
+                return;
+              }
+
+              const { remainingPatch, soldTrade } = splitPartialSell(trade, sold);
+              const updatedRemaining = await updateStockTrade(
+                trade.id,
+                remainingPatch
+              );
+              const created = await createStockTrade(soldTrade);
+              setTrades((prev) => [
+                created,
+                ...prev.map((t) => (t.id === trade.id ? updatedRemaining : t)),
+              ]);
+            }}
           />
         </div>
       </section>

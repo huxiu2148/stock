@@ -10,16 +10,161 @@ interface StockTableProps {
   trades: StockTrade[];
   onUpdate: (id: string, input: StockTradeInput) => Promise<void>;
   onDelete: (id: string) => void;
+  onPartialSell: (
+    trade: StockTrade,
+    sold: {
+      shares: number;
+      sell_date: string;
+      actual_sell_price: number;
+      fee_sell: number;
+      tax: number;
+    }
+  ) => Promise<void>;
   knownSymbols?: Record<string, string>;
+}
+
+function PartialSellForm({
+  trade,
+  onCancel,
+  onSubmit,
+}: {
+  trade: StockTrade;
+  onCancel: () => void;
+  onSubmit: (sold: {
+    shares: number;
+    sell_date: string;
+    actual_sell_price: number;
+    fee_sell: number;
+    tax: number;
+  }) => Promise<void>;
+}) {
+  const [shares, setShares] = useState(String(trade.shares));
+  const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10));
+  const [actualSellPrice, setActualSellPrice] = useState("");
+  const [feeSell, setFeeSell] = useState("0");
+  const [tax, setTax] = useState("0");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const sharesNum = Number(shares);
+  const valid =
+    sharesNum > 0 && sharesNum <= trade.shares && actualSellPrice.trim() !== "";
+
+  const inputCls =
+    "rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
+  const labelCls = "flex flex-col gap-1";
+  const capCls = "text-xs font-medium text-slate-500";
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valid) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit({
+        shares: sharesNum,
+        sell_date: sellDate,
+        actual_sell_price: Number(actualSellPrice),
+        fee_sell: Number(feeSell) || 0,
+        tax: Number(tax) || 0,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "儲存失敗");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-4"
+    >
+      <p className="col-span-2 text-xs text-slate-500 sm:col-span-4">
+        目前持有 {trade.shares} 股，賣出後剩餘股數會自動留在原本這筆紀錄繼續持有。
+      </p>
+      <label className={labelCls}>
+        <span className={capCls}>賣出股數</span>
+        <input
+          type="number"
+          value={shares}
+          max={trade.shares}
+          onChange={(e) => setShares(e.target.value)}
+          required
+          className={inputCls}
+        />
+      </label>
+      <label className={labelCls}>
+        <span className={capCls}>賣出日</span>
+        <input
+          type="date"
+          value={sellDate}
+          onChange={(e) => setSellDate(e.target.value)}
+          required
+          className={inputCls}
+        />
+      </label>
+      <label className={labelCls}>
+        <span className={capCls}>賣出價</span>
+        <input
+          type="number"
+          step="0.01"
+          value={actualSellPrice}
+          onChange={(e) => setActualSellPrice(e.target.value)}
+          required
+          className={inputCls}
+        />
+      </label>
+      <label className={labelCls}>
+        <span className={capCls}>賣出手續費</span>
+        <input
+          type="number"
+          step="0.01"
+          value={feeSell}
+          onChange={(e) => setFeeSell(e.target.value)}
+          className={inputCls}
+        />
+      </label>
+      <label className={labelCls}>
+        <span className={capCls}>交易稅</span>
+        <input
+          type="number"
+          step="0.01"
+          value={tax}
+          onChange={(e) => setTax(e.target.value)}
+          className={inputCls}
+        />
+      </label>
+      {error && <p className="col-span-2 text-xs text-rose-600 sm:col-span-4">{error}</p>}
+      <div className="col-span-2 flex items-center gap-2 sm:col-span-4">
+        <button
+          type="submit"
+          disabled={saving || !valid}
+          className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+        >
+          {saving ? "儲存中…" : "確認賣出"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg px-4 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
+        >
+          取消
+        </button>
+      </div>
+    </form>
+  );
 }
 
 export function StockTable({
   trades,
   onUpdate,
   onDelete,
+  onPartialSell,
   knownSymbols,
 }: StockTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sellingId, setSellingId] = useState<string | null>(null);
 
   if (trades.length === 0) {
     return <p className="py-6 text-center text-sm text-slate-400">尚無交易紀錄</p>;
@@ -60,6 +205,23 @@ export function StockTable({
               );
             }
 
+            if (sellingId === trade.id) {
+              return (
+                <tr key={trade.id}>
+                  <td colSpan={7} className="py-3">
+                    <PartialSellForm
+                      trade={trade}
+                      onCancel={() => setSellingId(null)}
+                      onSubmit={async (sold) => {
+                        await onPartialSell(trade, sold);
+                        setSellingId(null);
+                      }}
+                    />
+                  </td>
+                </tr>
+              );
+            }
+
             const calc = computeStockTrade(trade);
             const gain = calc.gainTwd;
             const gainColor =
@@ -68,6 +230,7 @@ export function StockTable({
                 : gain >= 0
                 ? "text-rose-600"
                 : "text-emerald-600";
+            const isOpen = !calc.isClosed && trade.shares > 0;
 
             return (
               <tr key={trade.id} className="border-b border-slate-100">
@@ -113,7 +276,15 @@ export function StockTable({
                     "持有中"
                   )}
                 </td>
-                <td className="py-2 pr-3 text-right">
+                <td className="py-2 pr-3 text-right whitespace-nowrap">
+                  {isOpen && (
+                    <button
+                      onClick={() => setSellingId(trade.id)}
+                      className="mr-2 text-xs text-slate-400 hover:text-slate-700"
+                    >
+                      分批賣出
+                    </button>
+                  )}
                   <button
                     onClick={() => setEditingId(trade.id)}
                     className="mr-2 text-xs text-slate-400 hover:text-slate-700"
