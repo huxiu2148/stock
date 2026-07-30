@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { minutesBetween, formatMinutes } from "@/lib/calc/time";
+import { errorMessage } from "@/lib/errors";
 
 interface QuickFill {
   label: string;
@@ -115,7 +116,7 @@ export function TimeRangeForm({
         setNote("");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "儲存失敗");
+      setError(errorMessage(err, "儲存失敗"));
     } finally {
       setSaving(false);
     }

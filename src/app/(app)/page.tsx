@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -56,7 +57,7 @@ export default function DashboardPage() {
         setLeaveEntries(leave);
         setTrades(stockTrades);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "資料載入失敗");
+        setError(errorMessage(e, "資料載入失敗"));
       } finally {
         setLoading(false);
       }

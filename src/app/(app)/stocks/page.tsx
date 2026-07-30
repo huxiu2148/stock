@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchStockTrades,
@@ -33,7 +34,7 @@ export default function StocksPage() {
       try {
         setTrades(await fetchStockTrades());
       } catch (e) {
-        setError(e instanceof Error ? e.message : "資料載入失敗");
+        setError(errorMessage(e, "資料載入失敗"));
       } finally {
         setLoading(false);
       }

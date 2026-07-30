@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchSalaryRecords,
@@ -105,7 +106,7 @@ export default function SalaryPage() {
         setLateEntries(late);
         setLeaveEntries(leave);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "資料載入失敗");
+        setError(errorMessage(e, "資料載入失敗"));
       } finally {
         setLoading(false);
       }
@@ -161,7 +162,7 @@ export default function SalaryPage() {
         setSelectedMonth(currentYearMonth());
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "刪除失敗");
+      setError(errorMessage(e, "刪除失敗"));
     }
   }
 
@@ -182,7 +183,7 @@ export default function SalaryPage() {
         return [...others, saved];
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "儲存失敗");
+      setError(errorMessage(e, "儲存失敗"));
     }
   }
 
@@ -270,7 +271,7 @@ export default function SalaryPage() {
       const saved = await upsertHireDate(date);
       setHireDate(saved.hire_date);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "儲存失敗");
+      setError(errorMessage(e, "儲存失敗"));
     }
   }
 
