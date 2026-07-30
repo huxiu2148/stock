@@ -30,6 +30,7 @@ interface StockTableProps {
     }
   ) => Promise<void>;
   knownSymbols?: Record<string, string>;
+  knownBrokers?: string[];
 }
 
 function PartialSellForm({
@@ -339,6 +340,7 @@ export function StockTable({
   onPartialSell,
   onMergeSell,
   knownSymbols,
+  knownBrokers,
 }: StockTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sellingId, setSellingId] = useState<string | null>(null);
@@ -427,6 +429,7 @@ export function StockTable({
                         initial={trade}
                         submitLabel="儲存變更"
                         knownSymbols={knownSymbols}
+                        knownBrokers={knownBrokers}
                         onCancel={() => setEditingId(null)}
                         onSubmit={async (input) => {
                           await onUpdate(trade.id, input);
@@ -484,6 +487,7 @@ export function StockTable({
                     <div className="text-xs text-slate-300">
                       {trade.market === "TW" ? "台股" : "美股"}
                       {trade.currency === "USD" ? " · 美金付款" : ""}
+                      {trade.broker ? ` · ${trade.broker}` : ""}
                     </div>
                   </td>
                   <td className="py-2 pr-3 text-slate-600">

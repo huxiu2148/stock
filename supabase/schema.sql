@@ -139,6 +139,7 @@ create table if not exists stock_trades (
   exchange_rate_buy numeric,   -- 買進當時匯率 (美股 USD 用)
   exchange_rate_sell numeric,  -- 賣出當時匯率
 
+  broker text,                 -- 券商/證券戶 (例如 國泰、永豐)
   note text,
 
   created_at timestamptz not null default now(),

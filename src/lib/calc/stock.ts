@@ -101,6 +101,7 @@ export function splitPartialSell(
     tax: sold.tax,
     exchange_rate_buy: trade.exchange_rate_buy,
     exchange_rate_sell: trade.exchange_rate_sell,
+    broker: trade.broker,
     note: trade.note,
   };
 

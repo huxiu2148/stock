@@ -10,6 +10,8 @@ interface StockFormProps {
   submitLabel?: string;
   /** 代碼 -> 名稱，來自你之前輸入過的交易紀錄，用來自動帶出名稱。 */
   knownSymbols?: Record<string, string>;
+  /** 你之前輸入過的券商名稱，用於下拉建議（例如 國泰、永豐）。 */
+  knownBrokers?: string[];
 }
 
 function field(v: number | null | undefined): string {
@@ -41,6 +43,7 @@ export function StockForm({
   onCancel,
   submitLabel = "新增交易",
   knownSymbols = {},
+  knownBrokers = [],
 }: StockFormProps) {
   const [market, setMarket] = useState<Market>(initial?.market ?? "TW");
   const [currency, setCurrency] = useState<Currency>(
@@ -48,6 +51,7 @@ export function StockForm({
   );
   const [symbol, setSymbol] = useState(initial?.symbol ?? "");
   const [name, setName] = useState(initial?.name ?? "");
+  const [broker, setBroker] = useState(initial?.broker ?? "");
   const [nameTouched, setNameTouched] = useState(Boolean(initial?.name));
   const [buyDate, setBuyDate] = useState(
     initial?.buy_date ?? new Date().toISOString().slice(0, 10)
@@ -94,6 +98,7 @@ export function StockForm({
         tax: num(tax),
         exchange_rate_buy: isUsd ? numOrNull(exBuy) : null,
         exchange_rate_sell: isUsd ? numOrNull(exSell) : null,
+        broker: broker.trim() || null,
         note: note.trim() || null,
       });
     } finally {
@@ -173,6 +178,21 @@ export function StockForm({
           }}
           className={inputCls}
         />
+      </label>
+      <label className={labelCls}>
+        <span className={capCls}>券商</span>
+        <input
+          value={broker}
+          list="known-brokers"
+          placeholder="例如 國泰、永豐"
+          onChange={(e) => setBroker(e.target.value)}
+          className={inputCls}
+        />
+        <datalist id="known-brokers">
+          {knownBrokers.map((b) => (
+            <option key={b} value={b} />
+          ))}
+        </datalist>
       </label>
 
       <label className={labelCls}>

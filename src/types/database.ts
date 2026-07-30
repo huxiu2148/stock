@@ -99,6 +99,7 @@ export interface StockTrade {
   tax: number;
   exchange_rate_buy: number | null;
   exchange_rate_sell: number | null;
+  broker: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;

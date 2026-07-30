@@ -46,6 +46,8 @@ export default function StocksPage() {
     })();
   }, []);
 
+  const [brokerFilter, setBrokerFilter] = useState<string>("ALL");
+
   const knownSymbols = useMemo(() => {
     const map: Record<string, string> = {};
     // trades 依買進日新到舊排序，第一次遇到的名稱即為最新一次輸入的名稱
@@ -55,10 +57,20 @@ export default function StocksPage() {
     return map;
   }, [trades]);
 
+  const knownBrokers = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of trades) {
+      if (t.broker) set.add(t.broker);
+    }
+    return [...set].sort();
+  }, [trades]);
+
   const filtered = useMemo(() => {
-    const scoped = tab === "ALL" ? trades : trades.filter((t) => t.market === tab);
+    const scoped = trades
+      .filter((t) => tab === "ALL" || t.market === tab)
+      .filter((t) => brokerFilter === "ALL" || t.broker === brokerFilter);
     return sortStockTrades(scoped);
-  }, [trades, tab]);
+  }, [trades, tab, brokerFilter]);
 
   const summary = useMemo(() => summarizeStockTrades(filtered), [filtered]);
 
@@ -100,20 +112,36 @@ export default function StocksPage() {
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-1">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  tab === t.key
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                    tab === t.key
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {knownBrokers.length > 0 && (
+              <select
+                value={brokerFilter}
+                onChange={(e) => setBrokerFilter(e.target.value)}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 focus:border-slate-500 focus:outline-none"
               >
-                {t.label}
-              </button>
-            ))}
+                <option value="ALL">全部券商</option>
+                {knownBrokers.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <button
             onClick={() => setShowAddForm((v) => !v)}
@@ -127,6 +155,7 @@ export default function StocksPage() {
           <div className="mt-4">
             <StockForm
               knownSymbols={knownSymbols}
+              knownBrokers={knownBrokers}
               onSubmit={async (input) => {
                 const saved = await createStockTrade(input);
                 setTrades((prev) => [saved, ...prev]);
@@ -141,6 +170,7 @@ export default function StocksPage() {
           <StockTable
             trades={filtered}
             knownSymbols={knownSymbols}
+            knownBrokers={knownBrokers}
             onUpdate={async (id, input) => {
               const saved = await updateStockTrade(id, input);
               setTrades((prev) => prev.map((t) => (t.id === id ? saved : t)));
