@@ -13,7 +13,9 @@ import { WORK_HOURS } from "./time";
  *
  * 國定假日出勤（依勞基法第39條）：
  * - 扣除午休 (12:10-13:10) 與晚餐休息 (19:10-19:40，若有加班到那麼晚)
- * - 只要有出勤，前 8 小時固定以「一整天」計，工資加倍發給 (*2)，
+ * - 國定假日當天的「1倍工資」本來就已經包含在月薪裡（不管有沒有上班都領得到），
+ *   所以「加班費」這個項目只需要額外算「多加發的1倍」，不是把整天算2倍。
+ *   只要有出勤，前 8 小時固定以「一整天」計，額外多發 *1 倍，
  *   不論實際工作時數多寡都算滿 8 小時（公司政策：出勤即保障一整天）
  * - 超過 8 小時的部分才依實際時數計算：第 9、10 小時以平日加班費率 *1.34 計，
  *   第 11、12 小時以 *1.67 計
@@ -33,7 +35,8 @@ const WEEKDAY_FIRST_TIER_RATE = 1.34;
 const WEEKDAY_SECOND_TIER_RATE = 1.67;
 
 const HOLIDAY_BASE_HOURS = 8;
-const HOLIDAY_BASE_RATE = 2;
+// 月薪已內含國定假日當天的 1 倍工資，加班費只需再多算 1 倍（而非 2 倍）。
+const HOLIDAY_BASE_RATE = 1;
 const HOLIDAY_SECOND_TIER_HOURS = 2;
 const HOLIDAY_SECOND_TIER_RATE = 1.34;
 const HOLIDAY_THIRD_TIER_RATE = 1.67;
