@@ -13,9 +13,10 @@ import { WORK_HOURS } from "./time";
  *
  * 國定假日出勤（依勞基法第39條）：
  * - 扣除午休 (12:10-13:10) 與晚餐休息 (19:10-19:40，若有加班到那麼晚)
- * - 前 8 小時工資加倍發給 (*2)
- * - 第 9、10 小時 (超過8小時的前2小時) 以平日加班費率 *1.34 計
- * - 第 11、12 小時以 *1.67 計
+ * - 只要有出勤，前 8 小時固定以「一整天」計，工資加倍發給 (*2)，
+ *   不論實際工作時數多寡都算滿 8 小時（公司政策：出勤即保障一整天）
+ * - 超過 8 小時的部分才依實際時數計算：第 9、10 小時以平日加班費率 *1.34 計，
+ *   第 11、12 小時以 *1.67 計
  *
  * 時數皆先換算成小時、四捨五入到小數點後兩位（比照公司系統的時數記錄方式），
  * 才拿這個時數去算錢；金額本身不提前捨入，累加多筆紀錄後只在畫面上捨入一次。
@@ -85,7 +86,8 @@ export function computeOvertimePayForRange(
     const mealAllowance =
       rawMinutes >= MEAL_ALLOWANCE_THRESHOLD_MINUTES ? MEAL_ALLOWANCE_AMOUNT : 0;
 
-    const baseHours = Math.min(payableHours, HOLIDAY_BASE_HOURS);
+    // 只要有出勤（時數 > 0），前 8 小時固定算滿一整天，不看實際打卡時間。
+    const baseHours = payableHours > 0 ? HOLIDAY_BASE_HOURS : 0;
     const secondTierHours = Math.min(
       Math.max(payableHours - HOLIDAY_BASE_HOURS, 0),
       HOLIDAY_SECOND_TIER_HOURS
@@ -100,7 +102,10 @@ export function computeOvertimePayForRange(
       hourlyWage * secondTierHours * HOLIDAY_SECOND_TIER_RATE +
       hourlyWage * thirdTierHours * HOLIDAY_THIRD_TIER_RATE;
 
-    return { payableMinutes, payableHours, pay, mealAllowance };
+    // 顯示用的時數採計薪時數（前8小時固定算8），而非實際打卡時數，跟薪資單一致。
+    const billedHours = baseHours + secondTierHours + thirdTierHours;
+
+    return { payableMinutes, payableHours: billedHours, pay, mealAllowance };
   }
 
   const { rawMinutes, payableMinutes, payableHours } = computePayableHours(
