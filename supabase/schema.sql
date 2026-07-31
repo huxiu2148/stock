@@ -209,6 +209,8 @@ create table if not exists credit_card_statements (
   year_month text not null,      -- e.g. '2025-07'
   amount numeric not null default 0,   -- 帳單總金額 (卡片原幣別)
   exchange_rate numeric,         -- 美金卡當月約略匯率，用於換算台幣加總
+  reserved boolean not null default false, -- 已預約交易 (結帳日附近約定轉帳)
+  debited boolean not null default false,  -- 已完成扣款
   note text,
 
   created_at timestamptz not null default now(),

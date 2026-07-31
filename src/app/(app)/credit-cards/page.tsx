@@ -95,7 +95,12 @@ export default function CreditCardsPage() {
 
   async function handleCommitStatement(
     card: CreditCard,
-    patch: { amount?: number; exchange_rate?: number }
+    patch: {
+      amount?: number;
+      exchange_rate?: number;
+      reserved?: boolean;
+      debited?: boolean;
+    }
   ) {
     const existing = statementByCard.get(card.id);
     try {
@@ -104,6 +109,8 @@ export default function CreditCardsPage() {
         year_month: selectedMonth,
         amount: patch.amount ?? existing?.amount ?? 0,
         exchange_rate: patch.exchange_rate ?? existing?.exchange_rate ?? null,
+        reserved: patch.reserved ?? existing?.reserved ?? false,
+        debited: patch.debited ?? existing?.debited ?? false,
         note: existing?.note ?? null,
       });
       setStatements((prev) => [...prev.filter((s) => s.id !== saved.id), saved]);
@@ -196,6 +203,8 @@ export default function CreditCardsPage() {
               onCommitExchangeRate={(rate) =>
                 handleCommitStatement(card, { exchange_rate: rate })
               }
+              onToggleReserved={(reserved) => handleCommitStatement(card, { reserved })}
+              onToggleDebited={(debited) => handleCommitStatement(card, { debited })}
               onUpdateCard={async (input) => {
                 const saved = await updateCreditCard(card.id, input);
                 setCards((prev) => prev.map((c) => (c.id === card.id ? saved : c)));

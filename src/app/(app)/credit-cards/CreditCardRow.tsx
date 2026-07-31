@@ -12,6 +12,8 @@ interface CreditCardRowProps {
   statement: CreditCardStatement | undefined;
   onCommitAmount: (amount: number) => void;
   onCommitExchangeRate: (rate: number) => void;
+  onToggleReserved: (reserved: boolean) => void;
+  onToggleDebited: (debited: boolean) => void;
   onUpdateCard: (input: CreditCardInput) => Promise<void>;
   onDeleteCard: () => void;
 }
@@ -20,11 +22,45 @@ function dayLabel(day: number | null): string {
   return day ? `${day} 號` : "—";
 }
 
+/** 兆豐、聯邦、星展用藍色底，其他卡片用紫色底，方便一眼區分。 */
+const BLUE_CARDS = new Set(["兆豐", "聯邦", "星展"]);
+function cardBgClass(name: string): string {
+  return BLUE_CARDS.has(name) ? "bg-blue-50" : "bg-purple-50";
+}
+
+function MarkToggle({
+  label,
+  activeLabel,
+  active,
+  onToggle,
+}: {
+  label: string;
+  activeLabel: string;
+  active: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!active)}
+      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+        active
+          ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+          : "border-slate-300 bg-white text-slate-400 hover:bg-slate-100"
+      }`}
+    >
+      {active ? `✓ ${activeLabel}` : label}
+    </button>
+  );
+}
+
 export function CreditCardRow({
   card,
   statement,
   onCommitAmount,
   onCommitExchangeRate,
+  onToggleReserved,
+  onToggleDebited,
   onUpdateCard,
   onDeleteCard,
 }: CreditCardRowProps) {
@@ -32,7 +68,7 @@ export function CreditCardRow({
 
   if (editing) {
     return (
-      <div className="rounded-xl bg-slate-50 p-4">
+      <div className={`rounded-xl p-4 ${cardBgClass(card.name)}`}>
         <CreditCardForm
           initial={card}
           submitLabel="儲存變更"
@@ -49,7 +85,7 @@ export function CreditCardRow({
   const twdAmount = statementTwdAmount(card, statement);
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-xl bg-slate-50 p-3">
+    <div className={`flex flex-wrap items-center gap-4 rounded-xl p-3 ${cardBgClass(card.name)}`}>
       <div className="min-w-[140px]">
         <div className="flex items-center gap-1.5 font-medium text-slate-800">
           {card.name}
@@ -84,6 +120,21 @@ export function CreditCardRow({
           </div>
         </>
       )}
+
+      <div className="flex gap-2">
+        <MarkToggle
+          label="預約交易"
+          activeLabel="已預約"
+          active={statement?.reserved ?? false}
+          onToggle={onToggleReserved}
+        />
+        <MarkToggle
+          label="完成扣款"
+          activeLabel="已扣款"
+          active={statement?.debited ?? false}
+          onToggle={onToggleDebited}
+        />
+      </div>
 
       <div className="ml-auto flex gap-2">
         <button

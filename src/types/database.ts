@@ -180,6 +180,8 @@ export interface CreditCardStatement {
   year_month: string; // e.g. '2025-07'
   amount: number; // 帳單總金額 (卡片原幣別)
   exchange_rate: number | null; // 美金卡當月約略匯率，用於換算台幣
+  reserved: boolean; // 已預約交易
+  debited: boolean; // 已完成扣款
   note: string | null;
   created_at: string;
   updated_at: string;
