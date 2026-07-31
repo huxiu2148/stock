@@ -174,13 +174,6 @@ export default function CreditCardsPage() {
       />
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <h3 className="text-sm font-medium text-slate-500">每月刷卡總額 (台幣)</h3>
-        <div className="mt-3">
-          <SpendingLineChart data={chartData} />
-        </div>
-      </section>
-
-      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-slate-500">
             {formatYearMonth(selectedMonth)} 刷卡總額 (台幣)
@@ -219,6 +212,13 @@ export default function CreditCardsPage() {
               }
             />
           ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <h3 className="text-sm font-medium text-slate-500">每月刷卡總額 (台幣)</h3>
+        <div className="mt-3">
+          <SpendingLineChart data={chartData} />
         </div>
       </section>
     </div>
