@@ -17,6 +17,7 @@ import { YearMonthPicker } from "@/components/YearMonthPicker";
 import type { CreditCard, CreditCardInput, CreditCardStatement } from "@/types/database";
 import { CreditCardForm } from "./CreditCardForm";
 import { CreditCardRow } from "./CreditCardRow";
+import { SpendingLineChart } from "./SpendingLineChart";
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -83,6 +84,14 @@ export default function CreditCardsPage() {
     () => sumMonthTwd(cards, statements, selectedMonth),
     [cards, statements, selectedMonth]
   );
+
+  const chartData = useMemo(() => {
+    const ascMonths = [...months].sort((a, b) => (a < b ? -1 : 1));
+    return ascMonths.map((m) => ({
+      month: m,
+      totalTwd: sumMonthTwd(cards, statements, m),
+    }));
+  }, [months, cards, statements]);
 
   async function handleCommitStatement(
     card: CreditCard,
@@ -156,6 +165,13 @@ export default function CreditCardsPage() {
         }}
         onDeleteMonth={handleDeleteMonth}
       />
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <h3 className="text-sm font-medium text-slate-500">每月刷卡總額 (台幣)</h3>
+        <div className="mt-3">
+          <SpendingLineChart data={chartData} />
+        </div>
+      </section>
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between">
