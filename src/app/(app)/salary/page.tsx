@@ -27,7 +27,7 @@ import type {
   OvertimeEntry,
   SalaryRecord,
 } from "@/types/database";
-import { YearMonthPicker } from "./YearMonthPicker";
+import { YearMonthPicker } from "@/components/YearMonthPicker";
 import { BaseSalarySection } from "./BaseSalarySection";
 import { DeductionsSection } from "./DeductionsSection";
 import { OvertimeSection } from "./OvertimeSection";

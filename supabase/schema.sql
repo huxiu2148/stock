@@ -147,6 +147,76 @@ create table if not exists stock_trades (
 );
 
 -- ============================================================
+-- 貸款還款計畫 (學貸、孝親費等)
+-- ============================================================
+create table if not exists loans (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+
+  name text not null,           -- 例如 富邦學貸、台銀學貸、媽媽
+  category text,                -- 學貸 / 孝親費 / 其他
+  principal_total numeric not null default 0,  -- 借款總額
+  has_interest boolean not null default true,  -- false 時不計算/顯示利息 (例如孝親費)
+  default_payment_amount numeric,  -- 每期預設還款本金金額，方便快速輸入
+  start_date date,               -- 開始還款日
+  due_day integer,               -- 每月還款日 (1-31)
+  total_installments integer,    -- 總期數 (選填，用於顯示進度)
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists loan_payments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  loan_id uuid not null references loans(id) on delete cascade,
+
+  pay_date date not null,
+  principal_paid numeric not null default 0,
+  interest_paid numeric not null default 0,
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
+-- 刷卡紀錄
+-- ============================================================
+create table if not exists credit_cards (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+
+  name text not null,           -- 例如 兆豐、國泰、聯邦、富邦、永豐、永豐美金、星展、台新
+  currency text not null default 'TWD' check (currency in ('TWD', 'USD')),
+  opened_date date,              -- 辦卡日
+  statement_day integer,         -- 結帳日
+  post_day integer,              -- 入帳日
+  debit_day integer,             -- 扣款日
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, name)
+);
+
+create table if not exists credit_card_statements (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  card_id uuid not null references credit_cards(id) on delete cascade,
+
+  year_month text not null,      -- e.g. '2025-07'
+  amount numeric not null default 0,   -- 帳單總金額 (卡片原幣別)
+  exchange_rate numeric,         -- 美金卡當月約略匯率，用於換算台幣加總
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (card_id, year_month)
+);
+
+-- ============================================================
 -- Row Level Security: 每個使用者只能存取自己的資料
 -- ============================================================
 alter table salary_records enable row level security;
@@ -156,12 +226,16 @@ alter table leave_entries enable row level security;
 alter table leave_balances enable row level security;
 alter table stock_trades enable row level security;
 alter table user_settings enable row level security;
+alter table loans enable row level security;
+alter table loan_payments enable row level security;
+alter table credit_cards enable row level security;
+alter table credit_card_statements enable row level security;
 
 do $$
 declare
   t text;
 begin
-  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades','user_settings']
+  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades','user_settings','loans','loan_payments','credit_cards','credit_card_statements']
   loop
     execute format('drop policy if exists "select_own" on %I', t);
     execute format('create policy "select_own" on %I for select using (auth.uid() = user_id)', t);
@@ -179,3 +253,5 @@ create index if not exists idx_late_user_date on late_entries(user_id, work_date
 create index if not exists idx_leave_user_date on leave_entries(user_id, work_date);
 create index if not exists idx_stock_user_market on stock_trades(user_id, market);
 create index if not exists idx_salary_user_month on salary_records(user_id, year_month);
+create index if not exists idx_loan_payments_loan on loan_payments(loan_id, pay_date);
+create index if not exists idx_credit_card_statements_card on credit_card_statements(card_id, year_month);

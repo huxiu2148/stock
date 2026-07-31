@@ -110,3 +110,83 @@ export type StockTradeInput = Omit<
   "id" | "user_id" | "created_at" | "updated_at"
 >;
 
+// ============================================================
+// 貸款還款計畫 (學貸、孝親費等)
+// ============================================================
+export interface Loan {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string | null; // 學貸 / 孝親費 / 其他，用於分類顯示
+  principal_total: number; // 借款總額
+  has_interest: boolean; // false 時不顯示/計算利息 (例如孝親費)
+  default_payment_amount: number | null; // 每期預設還款本金金額，方便快速輸入
+  start_date: string | null; // 開始還款日
+  due_day: number | null; // 每月還款日 (1-31)
+  total_installments: number | null; // 總期數 (選填，用於顯示進度)
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LoanInput = Omit<
+  Loan,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+
+export interface LoanPayment {
+  id: string;
+  user_id: string;
+  loan_id: string;
+  pay_date: string;
+  principal_paid: number;
+  interest_paid: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LoanPaymentInput = Omit<
+  LoanPayment,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+
+// ============================================================
+// 刷卡紀錄
+// ============================================================
+export interface CreditCard {
+  id: string;
+  user_id: string;
+  name: string;
+  currency: Currency;
+  opened_date: string | null; // 辦卡日
+  statement_day: number | null; // 結帳日
+  post_day: number | null; // 入帳日
+  debit_day: number | null; // 扣款日
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreditCardInput = Omit<
+  CreditCard,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+
+export interface CreditCardStatement {
+  id: string;
+  user_id: string;
+  card_id: string;
+  year_month: string; // e.g. '2025-07'
+  amount: number; // 帳單總金額 (卡片原幣別)
+  exchange_rate: number | null; // 美金卡當月約略匯率，用於換算台幣
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreditCardStatementInput = Omit<
+  CreditCardStatement,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+

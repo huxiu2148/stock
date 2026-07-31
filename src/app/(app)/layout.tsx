@@ -7,6 +7,8 @@ const NAV_ITEMS = [
   { href: "/", label: "總覽" },
   { href: "/salary", label: "薪資 / 假別" },
   { href: "/stocks", label: "股票" },
+  { href: "/loans", label: "貸款" },
+  { href: "/credit-cards", label: "刷卡紀錄" },
 ];
 
 export default async function AppLayout({

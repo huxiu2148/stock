@@ -7,10 +7,11 @@ interface MoneyInputProps {
   value: number;
   onCommit: (value: number) => void;
   placeholder?: string;
+  step?: string;
 }
 
 /** 數字輸入框：值為 0 時顯示空白，避免畫面被一堆 0 洗版。 */
-export function MoneyInput({ label, value, onCommit, placeholder }: MoneyInputProps) {
+export function MoneyInput({ label, value, onCommit, placeholder, step }: MoneyInputProps) {
   const [text, setText] = useState(value === 0 ? "" : String(value));
   const [prevValue, setPrevValue] = useState(value);
 
@@ -32,6 +33,7 @@ export function MoneyInput({ label, value, onCommit, placeholder }: MoneyInputPr
       <input
         type="number"
         inputMode="decimal"
+        step={step}
         value={text}
         placeholder={placeholder ?? "0"}
         onChange={(e) => setText(e.target.value)}
