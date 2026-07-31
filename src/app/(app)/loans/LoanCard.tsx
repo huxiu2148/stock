@@ -40,6 +40,7 @@ export function LoanCard({
   const [editingLoan, setEditingLoan] = useState(false);
   const [addingPayment, setAddingPayment] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const { rows, summary } = summarizeLoan(loan, payments);
   const progress =
@@ -153,71 +154,83 @@ export function LoanCard({
       </div>
 
       {rows.length > 0 && (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
-                <th className="py-2 pr-3">還款日</th>
-                <th className="py-2 pr-3">還款本金</th>
-                {loan.has_interest && <th className="py-2 pr-3">還款利息</th>}
-                <th className="py-2 pr-3">還款後剩餘本金</th>
-                <th className="py-2 pr-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                if (editingPaymentId === row.id) {
-                  return (
-                    <tr key={row.id}>
-                      <td colSpan={5} className="py-3">
-                        <LoanPaymentForm
-                          loan={loan}
-                          initial={row}
-                          defaultPayDate={row.pay_date}
-                          submitLabel="儲存變更"
-                          onCancel={() => setEditingPaymentId(null)}
-                          onSubmit={async (input) => {
-                            await onUpdatePayment(row.id, input);
-                            setEditingPaymentId(null);
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  );
-                }
-                return (
-                  <tr key={row.id} className="border-b border-slate-100">
-                    <td className="py-2 pr-3 text-slate-600">{row.pay_date}</td>
-                    <td className="py-2 pr-3 text-slate-600">
-                      {formatCurrency(row.principal_paid)}
-                    </td>
-                    {loan.has_interest && (
-                      <td className="py-2 pr-3 text-slate-600">
-                        {formatCurrency(row.interest_paid)}
-                      </td>
-                    )}
-                    <td className="py-2 pr-3 text-slate-600">
-                      {formatCurrency(row.remainingPrincipal)}
-                    </td>
-                    <td className="py-2 pr-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => setEditingPaymentId(row.id)}
-                        className="mr-2 text-xs text-slate-400 hover:text-slate-700"
-                      >
-                        編輯
-                      </button>
-                      <button
-                        onClick={() => onDeletePayment(row.id)}
-                        className="text-xs text-slate-400 hover:text-rose-600"
-                      >
-                        刪除
-                      </button>
-                    </td>
+        <div className="mt-4">
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+          >
+            <span className={`transition ${showHistory ? "rotate-90" : ""}`}>›</span>
+            還款紀錄（{rows.length} 筆）
+          </button>
+
+          {showHistory && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
+                    <th className="py-2 pr-3">還款日</th>
+                    <th className="py-2 pr-3">還款本金</th>
+                    {loan.has_interest && <th className="py-2 pr-3">還款利息</th>}
+                    <th className="py-2 pr-3">還款後剩餘本金</th>
+                    <th className="py-2 pr-3"></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    if (editingPaymentId === row.id) {
+                      return (
+                        <tr key={row.id}>
+                          <td colSpan={5} className="py-3">
+                            <LoanPaymentForm
+                              loan={loan}
+                              initial={row}
+                              defaultPayDate={row.pay_date}
+                              submitLabel="儲存變更"
+                              onCancel={() => setEditingPaymentId(null)}
+                              onSubmit={async (input) => {
+                                await onUpdatePayment(row.id, input);
+                                setEditingPaymentId(null);
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return (
+                      <tr key={row.id} className="border-b border-slate-100">
+                        <td className="py-2 pr-3 text-slate-600">{row.pay_date}</td>
+                        <td className="py-2 pr-3 text-slate-600">
+                          {formatCurrency(row.principal_paid)}
+                        </td>
+                        {loan.has_interest && (
+                          <td className="py-2 pr-3 text-slate-600">
+                            {formatCurrency(row.interest_paid)}
+                          </td>
+                        )}
+                        <td className="py-2 pr-3 text-slate-600">
+                          {formatCurrency(row.remainingPrincipal)}
+                        </td>
+                        <td className="py-2 pr-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => setEditingPaymentId(row.id)}
+                            className="mr-2 text-xs text-slate-400 hover:text-slate-700"
+                          >
+                            編輯
+                          </button>
+                          <button
+                            onClick={() => onDeletePayment(row.id)}
+                            className="text-xs text-slate-400 hover:text-rose-600"
+                          >
+                            刪除
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </section>
