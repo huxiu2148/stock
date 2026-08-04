@@ -2,12 +2,131 @@ import type { CardRewardRule } from "@/types/database";
 
 export const REWARD_CURRENCIES = ["TWD", "USD", "KRW", "JPY", "CNY"] as const;
 
+export type ChannelCategory =
+  | "網路購物"
+  | "超商量販"
+  | "餐飲"
+  | "數位影音"
+  | "旅遊"
+  | "日韓消費"
+  | "海外消費"
+  | "行動支付"
+  | "一般消費";
+
+/** 規則的通路文字裡只要包含這些關鍵字，就視為涵蓋該類別；一個通路可以同時涵蓋多個類別。 */
+const CATEGORY_KEYWORDS: [ChannelCategory, string[]][] = [
+  ["網路購物", ["網購", "購物"]],
+  ["超商量販", ["超商", "量販", "超市"]],
+  ["餐飲", ["餐飲", "美食"]],
+  ["數位影音", ["數位", "遊戲", "影音", "串流", "訂閱"]],
+  ["旅遊", ["旅遊", "旅行", "訂房", "機票"]],
+  ["日韓消費", ["日韓", "日本", "韓國"]],
+  ["海外消費", ["海外", "國外"]],
+  ["行動支付", ["行動支付", "電子支付"]],
+  ["一般消費", ["一般消費"]],
+];
+
+/** 依規則的通路文字，判斷它涵蓋哪些消費類別。 */
+export function categorizeChannel(channelLabel: string): ChannelCategory[] {
+  return CATEGORY_KEYWORDS.filter(([, keywords]) =>
+    keywords.some((k) => channelLabel.includes(k))
+  ).map(([category]) => category);
+}
+
+/** 常見商店/品牌關鍵字 → 消費類別，用來從商店名稱自動判斷通路。非窮舉，可持續擴充。 */
+const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
+  ["pchome", ["網路購物"]],
+  ["momo", ["網路購物"]],
+  ["蝦皮", ["網路購物"]],
+  ["shopee", ["網路購物"]],
+  ["淘寶", ["網路購物"]],
+  ["taobao", ["網路購物"]],
+  ["yahoo購物", ["網路購物"]],
+  ["博客來", ["網路購物"]],
+  ["friday購物", ["網路購物"]],
+  ["amazon", ["網路購物", "海外消費"]],
+  ["ebay", ["網路購物", "海外消費"]],
+  ["7-11", ["超商量販"]],
+  ["7-eleven", ["超商量販"]],
+  ["全家", ["超商量販"]],
+  ["familymart", ["超商量販"]],
+  ["萊爾富", ["超商量販"]],
+  ["ok mart", ["超商量販"]],
+  ["全聯", ["超商量販"]],
+  ["pxmart", ["超商量販"]],
+  ["家樂福", ["超商量販"]],
+  ["carrefour", ["超商量販"]],
+  ["大潤發", ["超商量販"]],
+  ["costco", ["超商量販"]],
+  ["好市多", ["超商量販"]],
+  ["starbucks", ["餐飲"]],
+  ["星巴克", ["餐飲"]],
+  ["foodpanda", ["餐飲"]],
+  ["ubereats", ["餐飲"]],
+  ["uber eats", ["餐飲"]],
+  ["麥當勞", ["餐飲"]],
+  ["mcdonald", ["餐飲"]],
+  ["肯德基", ["餐飲"]],
+  ["kfc", ["餐飲"]],
+  ["netflix", ["數位影音"]],
+  ["disney", ["數位影音"]],
+  ["spotify", ["數位影音"]],
+  ["youtube", ["數位影音"]],
+  ["apple music", ["數位影音"]],
+  ["hbo", ["數位影音"]],
+  ["agoda", ["旅遊"]],
+  ["booking", ["旅遊"]],
+  ["klook", ["旅遊"]],
+  ["kkday", ["旅遊"]],
+  ["trip.com", ["旅遊"]],
+  ["expedia", ["旅遊"]],
+  ["airbnb", ["旅遊"]],
+  ["長榮", ["旅遊", "海外消費"]],
+  ["華航", ["旅遊", "海外消費"]],
+  ["eva air", ["旅遊", "海外消費"]],
+  ["china airlines", ["旅遊", "海外消費"]],
+  ["日本", ["日韓消費", "海外消費"]],
+  ["japan", ["日韓消費", "海外消費"]],
+  ["東京", ["日韓消費", "海外消費"]],
+  ["大阪", ["日韓消費", "海外消費"]],
+  ["唐吉訶德", ["日韓消費", "海外消費"]],
+  ["sogo", ["日韓消費", "海外消費"]],
+  ["suica", ["日韓消費", "海外消費"]],
+  ["pasmo", ["日韓消費", "海外消費"]],
+  ["韓國", ["日韓消費", "海外消費"]],
+  ["korea", ["日韓消費", "海外消費"]],
+  ["首爾", ["日韓消費", "海外消費"]],
+  ["美國", ["海外消費"]],
+  ["usa", ["海外消費"]],
+  ["line pay", ["行動支付"]],
+  ["街口", ["行動支付"]],
+  ["jkopay", ["行動支付"]],
+  ["apple pay", ["行動支付"]],
+  ["google pay", ["行動支付"]],
+  ["台灣pay", ["行動支付"]],
+  ["taiwan pay", ["行動支付"]],
+];
+
+/** 依輸入的商店/通路文字，比對出符合的消費類別 (可能同時符合多個，例如「日本 amazon」)。 */
+export function matchMerchantCategories(text: string): ChannelCategory[] {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return [];
+  const matched = new Set<ChannelCategory>();
+  for (const [keyword, categories] of MERCHANT_KEYWORDS) {
+    if (normalized.includes(keyword.toLowerCase())) {
+      categories.forEach((c) => matched.add(c));
+    }
+  }
+  return [...matched];
+}
+
 export interface RewardCalcInput {
   amount: number;
   currency: string;
   /** currency 為 TWD 時忽略；其他幣別用來換算成台幣估算回饋。 */
   exchangeRate: number;
-  channel: string;
+  /** 消費商店/通路的原始輸入文字，內部會自動判斷屬於哪些消費類別。 */
+  merchant: string;
 }
 
 export interface CardRewardResult {
@@ -15,21 +134,6 @@ export interface CardRewardResult {
   rule: CardRewardRule | null;
   amountTwd: number;
   reward: number;
-}
-
-/** 依通路、幣別挑出最適用的規則：幣別完全對應優先，其次是不限幣別的規則；有多筆時取回饋比例最高者。 */
-function pickBestRule(
-  rules: CardRewardRule[],
-  channel: string,
-  currency: string
-): CardRewardRule | null {
-  const sameChannel = rules.filter((r) => r.channel === channel);
-  const currencyMatched = sameChannel.filter((r) => r.currency_scope === currency);
-  const pool = currencyMatched.length > 0
-    ? currencyMatched
-    : sameChannel.filter((r) => !r.currency_scope);
-  if (pool.length === 0) return null;
-  return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]);
 }
 
 export function groupRulesByCard(
@@ -44,6 +148,31 @@ export function groupRulesByCard(
   return map;
 }
 
+/**
+ * 挑出某張卡最適用的規則：先篩出「通路涵蓋這次消費類別」或「一般消費」的規則，
+ * 幣別完全對應優先，其次是不限幣別的規則；有多筆時取回饋比例最高者
+ * (這樣消費類別有對應到加碼規則時，加碼規則自然會贏過一般消費的基礎比例)。
+ */
+function pickBestRule(
+  rules: CardRewardRule[],
+  categories: ChannelCategory[],
+  currency: string
+): CardRewardRule | null {
+  const applicable = rules.filter((r) => {
+    const ruleCategories = categorizeChannel(r.channel);
+    return (
+      ruleCategories.includes("一般消費") ||
+      ruleCategories.some((c) => categories.includes(c))
+    );
+  });
+  const currencyMatched = applicable.filter((r) => r.currency_scope === currency);
+  const pool = currencyMatched.length > 0
+    ? currencyMatched
+    : applicable.filter((r) => !r.currency_scope);
+  if (pool.length === 0) return null;
+  return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]);
+}
+
 /** 依回饋金額由高到低排序每張卡的試算結果；沒有對應規則的卡片排在最後。 */
 export function rankCardRewards(
   rulesByCard: Map<string, CardRewardRule[]>,
@@ -51,10 +180,11 @@ export function rankCardRewards(
 ): CardRewardResult[] {
   const amountTwd =
     input.currency === "TWD" ? input.amount : input.amount * input.exchangeRate;
+  const categories = matchMerchantCategories(input.merchant);
 
   const results: CardRewardResult[] = [];
   for (const [cardName, rules] of rulesByCard) {
-    const rule = pickBestRule(rules, input.channel, input.currency);
+    const rule = pickBestRule(rules, categories, input.currency);
     const reward = rule
       ? Math.min(amountTwd * (rule.rate / 100), rule.max_reward ?? Infinity)
       : 0;
