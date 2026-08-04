@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import {
   CHANNEL_CATEGORIES,
+  MERCHANT_KEYWORD_LIST,
   REWARD_CURRENCIES,
   getPlanOptions,
   groupRulesByCard,
   matchMerchantCategories,
+  matchedMerchantKeywords,
   rankCardRewards,
   type ChannelCategory,
 } from "@/lib/calc/cardRewards";
@@ -58,6 +60,7 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
 
   const rulesByCard = useMemo(() => groupRulesByCard(rules), [rules]);
   const autoCategories = useMemo(() => matchMerchantCategories(merchant), [merchant]);
+  const matchedKeywords = useMemo(() => matchedMerchantKeywords(merchant), [merchant]);
   const categories = useMemo(
     () => (manualCategory ? [manualCategory] : autoCategories),
     [manualCategory, autoCategories]
@@ -153,10 +156,16 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
           <span className={capCls}>消費商店/通路</span>
           <input
             value={merchant}
+            list="known-merchant-keywords"
             placeholder="例如 pchome、7-11、日本 SOGO"
             onChange={(e) => setMerchant(e.target.value)}
             className={inputCls}
           />
+          <datalist id="known-merchant-keywords">
+            {MERCHANT_KEYWORD_LIST.map((k) => (
+              <option key={k} value={k} />
+            ))}
+          </datalist>
         </label>
         <label className={labelCls}>
           <span className={capCls}>手動指定類別 (選填)</span>
@@ -175,13 +184,20 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
         </label>
       </div>
 
+      {currency !== "TWD" && Number(amount) > 0 && (
+        <p className="mt-2 text-xs text-slate-500">
+          {Number(amount).toLocaleString("zh-TW")} {currency} ≈{" "}
+          {formatCurrency(Number(amount) * (Number(exchangeRate) || 0))}
+        </p>
+      )}
+
       <p className="mt-2 text-xs text-slate-400">
         {manualCategory
           ? `已手動指定為：${manualCategory}`
           : merchant.trim() === ""
           ? "輸入商店名稱後，會自動判斷消費類別，辨識不到時也可以手動指定"
           : autoCategories.length > 0
-          ? `辨識為：${autoCategories.join("、")}`
+          ? `符合關鍵字：${matchedKeywords.join("、")} → 辨識為：${autoCategories.join("、")}`
           : "無法辨識通路類別，僅計算一般消費回饋（也可以手動指定類別）"}
       </p>
 
@@ -231,11 +247,21 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
                 )}
 
                 <div className="mt-1 text-xs text-slate-400">
-                  {r.rule
-                    ? `${r.rule.channel} · ${r.rule.rate}%${
-                        r.rule.max_reward ? ` (上限 ${formatCurrency(r.rule.max_reward)})` : ""
-                      }`
-                    : "尚未設定符合的回饋規則"}
+                  {r.rule ? (
+                    <>
+                      {r.rule.plan_group && (
+                        <span className="mr-1 text-emerald-600">
+                          請切換至「{r.rule.channel}」方案 ·
+                        </span>
+                      )}
+                      {r.rule.channel} · {r.rule.rate}%
+                      {r.rule.max_reward
+                        ? ` (上限 ${formatCurrency(r.rule.max_reward)})`
+                        : ""}
+                    </>
+                  ) : (
+                    "尚未設定符合的回饋規則"
+                  )}
                 </div>
               </div>
             );

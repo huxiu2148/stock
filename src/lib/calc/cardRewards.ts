@@ -127,6 +127,18 @@ export function matchMerchantCategories(text: string): ChannelCategory[] {
   return [...matched];
 }
 
+/** 找出輸入文字裡實際比對到的關鍵字原文，用於畫面顯示「符合：xxx」。 */
+export function matchedMerchantKeywords(text: string): string[] {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return [];
+  return MERCHANT_KEYWORDS.filter(([keyword]) =>
+    normalized.includes(keyword.toLowerCase())
+  ).map(([keyword]) => keyword);
+}
+
+/** 已收錄的商店關鍵字清單，用於輸入框的自動完成建議。 */
+export const MERCHANT_KEYWORD_LIST: string[] = MERCHANT_KEYWORDS.map(([k]) => k);
+
 export interface RewardCalcInput {
   amount: number;
   currency: string;
