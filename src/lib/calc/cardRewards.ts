@@ -38,7 +38,15 @@ export function categorizeChannel(channelLabel: string): ChannelCategory[] {
   ).map(([category]) => category);
 }
 
-/** 常見商店/品牌關鍵字 → 消費類別，用來從商店名稱自動判斷通路。非窮舉，可持續擴充。 */
+/**
+ * 常見商店/品牌關鍵字 → 消費類別，用來從商店名稱自動判斷通路。非窮舉，可持續擴充。
+ *
+ * 注意：「日韓消費」「海外消費」代表的是人在當地面對面刷卡消費，
+ * 不是「品牌/平台是日韓或海外公司」。很多卡片的海外/日韓加碼條款明文
+ * 只認實體面對面交易、排除網路購物 (例如富邦J卡)，所以像 weverse、
+ * amazon 這類網路平台即使公司在海外，也只標「網路購物」，不能標成
+ * 「日韓消費」或「海外消費」，避免誤導使用者以為網購也算加碼。
+ */
 const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["pchome", ["網路購物"]],
   ["momo", ["網路購物"]],
@@ -49,8 +57,8 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["yahoo購物", ["網路購物"]],
   ["博客來", ["網路購物"]],
   ["friday購物", ["網路購物"]],
-  ["amazon", ["網路購物", "海外消費"]],
-  ["ebay", ["網路購物", "海外消費"]],
+  ["amazon", ["網路購物"]],
+  ["ebay", ["網路購物"]],
   ["7-11", ["超商量販"]],
   ["7-eleven", ["超商量販"]],
   ["全家", ["超商量販"]],
@@ -75,7 +83,7 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["kfc", ["餐飲"]],
   ["netflix", ["數位影音"]],
   ["disney", ["數位影音"]],
-  ["weverse", ["數位影音", "日韓消費", "海外消費"]],
+  ["weverse", ["數位影音", "網路購物"]],
   ["wowpass", ["日韓消費", "海外消費", "旅遊"]],
   ["spotify", ["數位影音"]],
   ["youtube", ["數位影音"]],
@@ -88,10 +96,10 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["trip.com", ["旅遊"]],
   ["expedia", ["旅遊"]],
   ["airbnb", ["旅遊"]],
-  ["長榮", ["旅遊", "海外消費"]],
-  ["華航", ["旅遊", "海外消費"]],
-  ["eva air", ["旅遊", "海外消費"]],
-  ["china airlines", ["旅遊", "海外消費"]],
+  ["長榮", ["旅遊"]],
+  ["華航", ["旅遊"]],
+  ["eva air", ["旅遊"]],
+  ["china airlines", ["旅遊"]],
   ["日本", ["日韓消費", "海外消費"]],
   ["japan", ["日韓消費", "海外消費"]],
   ["東京", ["日韓消費", "海外消費"]],

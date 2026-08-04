@@ -200,6 +200,12 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
           ? `符合關鍵字：${matchedKeywords.join("、")} → 辨識為：${autoCategories.join("、")}`
           : "無法辨識通路類別，僅計算一般消費回饋（也可以手動指定類別）"}
       </p>
+      {categories.includes("海外消費") || categories.includes("日韓消費") ? (
+        <p className="mt-1 text-xs text-amber-600">
+          提醒：多數卡片的海外/日韓加碼只認「當地面對面刷卡」，網路平台即使是海外/日韓公司
+          (例如 Weverse) 通常不算，實際是否符合請以該筆消費的實際刷卡地點/方式為準。
+        </p>
+      ) : null}
 
       {results.length > 0 && (
         <div className="mt-4 space-y-2">
