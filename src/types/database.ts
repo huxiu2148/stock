@@ -193,21 +193,23 @@ export type CreditCardStatementInput = Omit<
 >;
 
 // ============================================================
-// 刷卡攻略 (什麼情況用哪張卡、切換什麼權益最划算)
+// 刷卡回饋試算 (輸入金額與消費通路，自動算出各卡回饋並排序)
 // ============================================================
-export interface CardUsageTip {
+export interface CardRewardRule {
   id: string;
   user_id: string;
-  scenario: string; // 情境/消費類型，例如：網路購物、加油、海外刷卡
-  card_name: string; // 卡片名稱
-  benefit: string; // 要切換/登錄的權益
+  card_name: string; // 卡片名稱，例如：國泰CUBE
+  channel: string; // 消費通路，例如：一般消費、網路購物、海外消費、行動支付
+  currency_scope: string | null; // 限定幣別 (例如僅海外消費適用)，null = 不限
+  rate: number; // 回饋比例 (%)，例如 3 表示 3%
+  max_reward: number | null; // 回饋上限金額 (台幣)，選填
   note: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type CardUsageTipInput = Omit<
-  CardUsageTip,
+export type CardRewardRuleInput = Omit<
+  CardRewardRule,
   "id" | "user_id" | "created_at" | "updated_at"
 >;
 

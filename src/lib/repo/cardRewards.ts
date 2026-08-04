@@ -1,19 +1,19 @@
 import { createClient } from "@/lib/supabase/client";
-import type { CardUsageTip, CardUsageTipInput } from "@/types/database";
+import type { CardRewardRule, CardRewardRuleInput } from "@/types/database";
 
-export async function fetchCardUsageTips(): Promise<CardUsageTip[]> {
+export async function fetchCardRewardRules(): Promise<CardRewardRule[]> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("card_usage_tips")
+    .from("card_reward_rules")
     .select("*")
-    .order("scenario", { ascending: true });
+    .order("card_name", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function createCardUsageTip(
-  input: CardUsageTipInput
-): Promise<CardUsageTip> {
+export async function createCardRewardRule(
+  input: CardRewardRuleInput
+): Promise<CardRewardRule> {
   const supabase = createClient();
   const {
     data: { user },
@@ -21,7 +21,7 @@ export async function createCardUsageTip(
   if (!user) throw new Error("未登入");
 
   const { data, error } = await supabase
-    .from("card_usage_tips")
+    .from("card_reward_rules")
     .insert({ ...input, user_id: user.id })
     .select("*")
     .single();
@@ -29,13 +29,13 @@ export async function createCardUsageTip(
   return data;
 }
 
-export async function updateCardUsageTip(
+export async function updateCardRewardRule(
   id: string,
-  patch: Partial<CardUsageTipInput>
-): Promise<CardUsageTip> {
+  patch: Partial<CardRewardRuleInput>
+): Promise<CardRewardRule> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("card_usage_tips")
+    .from("card_reward_rules")
     .update(patch)
     .eq("id", id)
     .select("*")
@@ -44,8 +44,8 @@ export async function updateCardUsageTip(
   return data;
 }
 
-export async function deleteCardUsageTip(id: string): Promise<void> {
+export async function deleteCardRewardRule(id: string): Promise<void> {
   const supabase = createClient();
-  const { error } = await supabase.from("card_usage_tips").delete().eq("id", id);
+  const { error } = await supabase.from("card_reward_rules").delete().eq("id", id);
   if (error) throw error;
 }
