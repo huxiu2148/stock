@@ -156,16 +156,29 @@ export function groupRulesByCard(
 }
 
 /**
- * 挑出某張卡最適用的規則：先篩出「通路涵蓋這次消費類別」或「一般消費」的規則，
+ * 有些卡片 (例如國泰CUBE、台新Richart) 同時間只能啟用一個權益方案，
+ * 這些規則會共用同一個 plan_group；回傳這張卡有哪些互斥方案可以選。
+ */
+export function getPlanOptions(rules: CardRewardRule[]): CardRewardRule[] {
+  return rules.filter((r) => r.plan_group);
+}
+
+/**
+ * 挑出某張卡最適用的規則：先排除掉「屬於互斥方案分組、但不是目前啟用的那個」，
+ * 再篩出「通路涵蓋這次消費類別」或「一般消費」的規則，
  * 幣別完全對應優先，其次是不限幣別的規則；有多筆時取回饋比例最高者
  * (這樣消費類別有對應到加碼規則時，加碼規則自然會贏過一般消費的基礎比例)。
  */
 function pickBestRule(
   rules: CardRewardRule[],
   categories: ChannelCategory[],
-  currency: string
+  currency: string,
+  activePlanChannel: string | null
 ): CardRewardRule | null {
-  const applicable = rules.filter((r) => {
+  const eligible = rules.filter(
+    (r) => !r.plan_group || r.channel === activePlanChannel
+  );
+  const applicable = eligible.filter((r) => {
     const ruleCategories = categorizeChannel(r.channel);
     return (
       ruleCategories.includes("一般消費") ||
@@ -180,17 +193,26 @@ function pickBestRule(
   return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]);
 }
 
-/** 依回饋金額由高到低排序每張卡的試算結果；沒有對應規則的卡片排在最後。 */
+/**
+ * 依回饋金額由高到低排序每張卡的試算結果；沒有對應規則的卡片排在最後。
+ * activePlanByCard: 卡片名稱 -> 目前啟用的方案 (規則的 channel)，只有互斥方案卡片需要提供。
+ */
 export function rankCardRewards(
   rulesByCard: Map<string, CardRewardRule[]>,
-  input: RewardCalcInput
+  input: RewardCalcInput,
+  activePlanByCard: Record<string, string> = {}
 ): CardRewardResult[] {
   const amountTwd =
     input.currency === "TWD" ? input.amount : input.amount * input.exchangeRate;
 
   const results: CardRewardResult[] = [];
   for (const [cardName, rules] of rulesByCard) {
-    const rule = pickBestRule(rules, input.categories, input.currency);
+    const rule = pickBestRule(
+      rules,
+      input.categories,
+      input.currency,
+      activePlanByCard[cardName] ?? null
+    );
     const reward = rule
       ? Math.min(amountTwd * (rule.rate / 100), rule.max_reward ?? Infinity)
       : 0;

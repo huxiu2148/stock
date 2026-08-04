@@ -1,7 +1,7 @@
 "use client";
 
 import { errorMessage } from "@/lib/errors";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   fetchCardRewardRules,
   createCardRewardRule,
@@ -31,6 +31,14 @@ export default function CardRewardsPage() {
       }
     })();
   }, []);
+
+  const knownPlanGroups = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rules) {
+      if (r.plan_group) set.add(r.plan_group);
+    }
+    return [...set];
+  }, [rules]);
 
   if (loading) return <p className="text-sm text-slate-400">載入中…</p>;
 
@@ -68,6 +76,7 @@ export default function CardRewardsPage() {
         {showAddForm && (
           <div className="mt-4">
             <CardRewardRuleForm
+              knownPlanGroups={knownPlanGroups}
               onCancel={() => setShowAddForm(false)}
               onSubmit={async (input) => {
                 const saved = await createCardRewardRule(input);
@@ -92,6 +101,7 @@ export default function CardRewardsPage() {
                     <th className="py-2 pr-3">限定幣別</th>
                     <th className="py-2 pr-3">回饋比例</th>
                     <th className="py-2 pr-3">上限</th>
+                    <th className="py-2 pr-3">方案分組</th>
                     <th className="py-2 pr-3">備註</th>
                     <th className="py-2 pr-3"></th>
                   </tr>
@@ -101,9 +111,10 @@ export default function CardRewardsPage() {
                     if (editingId === rule.id) {
                       return (
                         <tr key={rule.id}>
-                          <td colSpan={7} className="py-3">
+                          <td colSpan={8} className="py-3">
                             <CardRewardRuleForm
                               initial={rule}
+                              knownPlanGroups={knownPlanGroups}
                               submitLabel="儲存變更"
                               onCancel={() => setEditingId(null)}
                               onSubmit={async (input) => {
@@ -130,6 +141,9 @@ export default function CardRewardsPage() {
                         <td className="py-2 pr-3 text-slate-600">{rule.rate}%</td>
                         <td className="py-2 pr-3 text-slate-600">
                           {rule.max_reward ?? "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-slate-400">
+                          {rule.plan_group ?? "—"}
                         </td>
                         <td className="py-2 pr-3 text-slate-400">{rule.note ?? "—"}</td>
                         <td className="py-2 pr-3 text-right whitespace-nowrap">

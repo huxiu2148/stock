@@ -7,6 +7,7 @@ import { REWARD_CURRENCIES } from "@/lib/calc/cardRewards";
 
 interface CardRewardRuleFormProps {
   initial?: Partial<CardRewardRuleInput>;
+  knownPlanGroups?: string[];
   onSubmit: (input: CardRewardRuleInput) => Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
@@ -37,6 +38,7 @@ function numOrNull(v: string): number | null {
 
 export function CardRewardRuleForm({
   initial,
+  knownPlanGroups = [],
   onSubmit,
   onCancel,
   submitLabel = "新增規則",
@@ -46,6 +48,7 @@ export function CardRewardRuleForm({
   const [currencyScope, setCurrencyScope] = useState(initial?.currency_scope ?? "");
   const [rate, setRate] = useState(field(initial?.rate ?? 0));
   const [maxReward, setMaxReward] = useState(field(initial?.max_reward));
+  const [planGroup, setPlanGroup] = useState(initial?.plan_group ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,7 @@ export function CardRewardRuleForm({
         currency_scope: currencyScope || null,
         rate: Number(rate) || 0,
         max_reward: numOrNull(maxReward),
+        plan_group: planGroup.trim() || null,
         note: note.trim() || null,
       });
     } catch (err) {
@@ -148,6 +152,25 @@ export function CardRewardRuleForm({
           onChange={(e) => setMaxReward(e.target.value)}
           className={inputCls}
         />
+      </label>
+
+      <label className={labelCls}>
+        <span className={capCls}>互斥方案分組 (選填)</span>
+        <input
+          value={planGroup}
+          list="known-plan-groups"
+          placeholder="例如 CUBE方案"
+          onChange={(e) => setPlanGroup(e.target.value)}
+          className={inputCls}
+        />
+        <datalist id="known-plan-groups">
+          {knownPlanGroups.map((g) => (
+            <option key={g} value={g} />
+          ))}
+        </datalist>
+        <span className="text-xs text-slate-400">
+          同一分組同時間只能啟用一個方案（例如國泰CUBE、台新Richart），一般消費/固定加碼留空
+        </span>
       </label>
 
       <label className={`${labelCls} col-span-2 sm:col-span-4`}>

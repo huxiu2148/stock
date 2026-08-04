@@ -230,6 +230,7 @@ create table if not exists card_reward_rules (
   currency_scope text,          -- 限定幣別 (例如僅海外消費適用)，留空 = 不限
   rate numeric not null default 0,   -- 回饋比例 (%)，例如 3 表示 3%
   max_reward numeric,           -- 回饋上限金額 (台幣)，選填
+  plan_group text,              -- 互斥方案分組 (例如國泰CUBE、台新Richart 同時間只能啟用一個方案)，留空 = 一律適用
   note text,
 
   created_at timestamptz not null default now(),

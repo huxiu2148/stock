@@ -203,6 +203,7 @@ export interface CardRewardRule {
   currency_scope: string | null; // 限定幣別 (例如僅海外消費適用)，null = 不限
   rate: number; // 回饋比例 (%)，例如 3 表示 3%
   max_reward: number | null; // 回饋上限金額 (台幣)，選填
+  plan_group: string | null; // 互斥方案分組 (同時間只能啟用其中一個)，null = 一律適用
   note: string | null;
   created_at: string;
   updated_at: string;

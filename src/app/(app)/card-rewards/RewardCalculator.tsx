@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/format";
 import {
   CHANNEL_CATEGORIES,
   REWARD_CURRENCIES,
+  getPlanOptions,
   groupRulesByCard,
   matchMerchantCategories,
   rankCardRewards,
@@ -24,6 +25,7 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
   const [fetchedCurrency, setFetchedCurrency] = useState<string | null>("TWD");
   const [merchant, setMerchant] = useState("");
   const [manualCategory, setManualCategory] = useState<ChannelCategory | "">("");
+  const [activePlanByCard, setActivePlanByCard] = useState<Record<string, string>>({});
 
   // 查詢中 = 已切換到非台幣幣別，但這個幣別的匯率還沒查完。
   const rateLoading = currency !== "TWD" && fetchedCurrency !== currency;
@@ -61,16 +63,39 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
     [manualCategory, autoCategories]
   );
 
+  // 有些卡片 (國泰CUBE、台新Richart) 同時間只能啟用一個方案，這裡算出每張卡有哪些方案可選。
+  const planOptionsByCard = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof getPlanOptions>>();
+    for (const [cardName, cardRules] of rulesByCard) {
+      const options = getPlanOptions(cardRules);
+      if (options.length > 0) map.set(cardName, options);
+    }
+    return map;
+  }, [rulesByCard]);
+
+  // 尚未手動選過方案的卡片，預設用第一個方案。
+  const resolvedActivePlanByCard = useMemo(() => {
+    const record: Record<string, string> = {};
+    for (const [cardName, options] of planOptionsByCard) {
+      record[cardName] = activePlanByCard[cardName] ?? options[0].channel;
+    }
+    return record;
+  }, [planOptionsByCard, activePlanByCard]);
+
   const results = useMemo(() => {
     const amountNum = Number(amount);
     if (!amountNum || amountNum <= 0) return [];
-    return rankCardRewards(rulesByCard, {
-      amount: amountNum,
-      currency,
-      exchangeRate: currency === "TWD" ? 1 : Number(exchangeRate) || 1,
-      categories,
-    });
-  }, [rulesByCard, amount, currency, exchangeRate, categories]);
+    return rankCardRewards(
+      rulesByCard,
+      {
+        amount: amountNum,
+        currency,
+        exchangeRate: currency === "TWD" ? 1 : Number(exchangeRate) || 1,
+        categories,
+      },
+      resolvedActivePlanByCard
+    );
+  }, [rulesByCard, amount, currency, exchangeRate, categories, resolvedActivePlanByCard]);
 
   const inputCls =
     "rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
@@ -162,19 +187,50 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
 
       {results.length > 0 && (
         <div className="mt-4 space-y-2">
-          {results.map((r, i) => (
-            <div
-              key={r.cardName}
-              className={`flex items-center justify-between rounded-xl p-3 ${
-                i === 0 && r.rule ? "bg-emerald-50 ring-1 ring-emerald-200" : "bg-slate-50"
-              }`}
-            >
-              <div>
-                <div className="font-medium text-slate-800">
-                  {i === 0 && r.rule && "🏆 "}
-                  {r.cardName}
+          {results.map((r, i) => {
+            const planOptions = planOptionsByCard.get(r.cardName);
+            const activePlan = resolvedActivePlanByCard[r.cardName];
+            return (
+              <div
+                key={r.cardName}
+                className={`rounded-xl p-3 ${
+                  i === 0 && r.rule ? "bg-emerald-50 ring-1 ring-emerald-200" : "bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-slate-800">
+                    {i === 0 && r.rule && "🏆 "}
+                    {r.cardName}
+                  </div>
+                  <div className="text-lg font-bold text-slate-900">
+                    {formatCurrency(r.reward)}
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400">
+
+                {planOptions && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {planOptions.map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() =>
+                          setActivePlanByCard((prev) => ({
+                            ...prev,
+                            [r.cardName]: opt.channel,
+                          }))
+                        }
+                        className={`rounded-full px-2 py-0.5 text-xs transition ${
+                          activePlan === opt.channel
+                            ? "bg-slate-900 text-white"
+                            : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {opt.channel}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-1 text-xs text-slate-400">
                   {r.rule
                     ? `${r.rule.channel} · ${r.rule.rate}%${
                         r.rule.max_reward ? ` (上限 ${formatCurrency(r.rule.max_reward)})` : ""
@@ -182,11 +238,8 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
                     : "尚未設定符合的回饋規則"}
                 </div>
               </div>
-              <div className="text-lg font-bold text-slate-900">
-                {formatCurrency(r.reward)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
