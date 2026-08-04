@@ -26,6 +26,11 @@ const CATEGORY_KEYWORDS: [ChannelCategory, string[]][] = [
   ["一般消費", ["一般消費"]],
 ];
 
+/** 可手動指定的消費類別清單 (不含「一般消費」，因為那一律都會當作保底自動套用)。 */
+export const CHANNEL_CATEGORIES: ChannelCategory[] = CATEGORY_KEYWORDS.map(
+  ([c]) => c
+).filter((c) => c !== "一般消費");
+
 /** 依規則的通路文字，判斷它涵蓋哪些消費類別。 */
 export function categorizeChannel(channelLabel: string): ChannelCategory[] {
   return CATEGORY_KEYWORDS.filter(([, keywords]) =>
@@ -70,6 +75,8 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["kfc", ["餐飲"]],
   ["netflix", ["數位影音"]],
   ["disney", ["數位影音"]],
+  ["weverse", ["數位影音", "日韓消費", "海外消費"]],
+  ["wowpass", ["日韓消費", "海外消費", "旅遊"]],
   ["spotify", ["數位影音"]],
   ["youtube", ["數位影音"]],
   ["apple music", ["數位影音"]],
@@ -125,8 +132,8 @@ export interface RewardCalcInput {
   currency: string;
   /** currency 為 TWD 時忽略；其他幣別用來換算成台幣估算回饋。 */
   exchangeRate: number;
-  /** 消費商店/通路的原始輸入文字，內部會自動判斷屬於哪些消費類別。 */
-  merchant: string;
+  /** 這次消費符合的消費類別 (通常是自動判斷商店名稱得出，也可以手動指定)。 */
+  categories: ChannelCategory[];
 }
 
 export interface CardRewardResult {
@@ -180,11 +187,10 @@ export function rankCardRewards(
 ): CardRewardResult[] {
   const amountTwd =
     input.currency === "TWD" ? input.amount : input.amount * input.exchangeRate;
-  const categories = matchMerchantCategories(input.merchant);
 
   const results: CardRewardResult[] = [];
   for (const [cardName, rules] of rulesByCard) {
-    const rule = pickBestRule(rules, categories, input.currency);
+    const rule = pickBestRule(rules, input.categories, input.currency);
     const reward = rule
       ? Math.min(amountTwd * (rule.rate / 100), rule.max_reward ?? Infinity)
       : 0;
