@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/stocks", label: "股票" },
   { href: "/loans", label: "貸款" },
   { href: "/credit-cards", label: "刷卡紀錄" },
+  { href: "/card-tips", label: "刷卡攻略" },
 ];
 
 export default async function AppLayout({

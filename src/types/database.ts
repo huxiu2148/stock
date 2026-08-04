@@ -192,3 +192,22 @@ export type CreditCardStatementInput = Omit<
   "id" | "user_id" | "created_at" | "updated_at"
 >;
 
+// ============================================================
+// 刷卡攻略 (什麼情況用哪張卡、切換什麼權益最划算)
+// ============================================================
+export interface CardUsageTip {
+  id: string;
+  user_id: string;
+  scenario: string; // 情境/消費類型，例如：網路購物、加油、海外刷卡
+  card_name: string; // 卡片名稱
+  benefit: string; // 要切換/登錄的權益
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CardUsageTipInput = Omit<
+  CardUsageTip,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+
