@@ -199,3 +199,42 @@ export function summarizeStockTrades(trades: StockTrade[]): StockPortfolioSummar
     }
   );
 }
+
+export interface StockSplitAdjustment {
+  tradeId: string;
+  buyDate: string;
+  before: { shares: number; buy_price: number; target_sell_price: number | null };
+  after: { shares: number; buy_price: number; target_sell_price: number | null };
+}
+
+/**
+ * 股票分割：拆分日之前買進、還沒賣出的持股，股數乘上分割比例、每股價格除以分割比例，
+ * 讓「買進價 x 股數」算出來的總成本維持不變 (已賣出的舊紀錄不受影響)。
+ * ratio = 拆分後股數 / 拆分前股數，例如 1 股換 4 股就是 4。
+ */
+export function planStockSplit(
+  trades: StockTrade[],
+  symbol: string,
+  effectiveDate: string,
+  ratio: number
+): StockSplitAdjustment[] {
+  return trades
+    .filter(
+      (t) => t.symbol === symbol && t.sell_date == null && t.buy_date < effectiveDate
+    )
+    .map((t) => ({
+      tradeId: t.id,
+      buyDate: t.buy_date,
+      before: {
+        shares: t.shares,
+        buy_price: t.buy_price,
+        target_sell_price: t.target_sell_price,
+      },
+      after: {
+        shares: t.shares * ratio,
+        buy_price: t.buy_price / ratio,
+        target_sell_price:
+          t.target_sell_price != null ? t.target_sell_price / ratio : null,
+      },
+    }));
+}

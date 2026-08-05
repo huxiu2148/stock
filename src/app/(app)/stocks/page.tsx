@@ -18,6 +18,7 @@ import { formatCurrency } from "@/lib/format";
 import type { Market, StockTrade } from "@/types/database";
 import { StockForm } from "./StockForm";
 import { StockTable } from "./StockTable";
+import { StockSplitForm } from "./StockSplitForm";
 
 type Tab = "ALL" | Market;
 
@@ -33,6 +34,7 @@ export default function StocksPage() {
   const [trades, setTrades] = useState<StockTrade[]>([]);
   const [tab, setTab] = useState<Tab>("ALL");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showSplitForm, setShowSplitForm] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -143,13 +145,44 @@ export default function StocksPage() {
               </select>
             )}
           </div>
-          <button
-            onClick={() => setShowAddForm((v) => !v)}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
-          >
-            {showAddForm ? "取消新增" : "+ 新增交易"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSplitForm((v) => !v)}
+              className="rounded-lg bg-white px-4 py-1.5 text-sm font-medium text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50"
+            >
+              {showSplitForm ? "取消分割調整" : "股票分割調整"}
+            </button>
+            <button
+              onClick={() => setShowAddForm((v) => !v)}
+              className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+            >
+              {showAddForm ? "取消新增" : "+ 新增交易"}
+            </button>
+          </div>
         </div>
+
+        {showSplitForm && (
+          <div className="mt-4">
+            <StockSplitForm
+              trades={trades}
+              knownSymbols={knownSymbols}
+              onCancel={() => setShowSplitForm(false)}
+              onApply={async (adjustments) => {
+                const updated = new Map<string, StockTrade>();
+                for (const a of adjustments) {
+                  const saved = await updateStockTrade(a.tradeId, {
+                    shares: a.shares,
+                    buy_price: a.buy_price,
+                    target_sell_price: a.target_sell_price,
+                  });
+                  updated.set(saved.id, saved);
+                }
+                setTrades((prev) => prev.map((t) => updated.get(t.id) ?? t));
+                setShowSplitForm(false);
+              }}
+            />
+          </div>
+        )}
 
         {showAddForm && (
           <div className="mt-4">
