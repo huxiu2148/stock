@@ -413,7 +413,7 @@ export function StockTable({
               <th className="py-2 pr-3">代碼</th>
               <th className="py-2 pr-3">買進日 / 賣出日</th>
               <th className="py-2 pr-3">股數</th>
-              <th className="py-2 pr-3">買進 / 賣出價</th>
+              <th className="py-2 pr-3">買進 / 理想 / 賣出價</th>
               <th className="py-2 pr-3">成本 / 收入</th>
               <th className="py-2 pr-3">損益</th>
               <th className="py-2 pr-3"></th>
@@ -497,6 +497,9 @@ export function StockTable({
                   <td className="py-2 pr-3 text-slate-600">{trade.shares}</td>
                   <td className="py-2 pr-3 text-slate-600">
                     <div>{trade.buy_price}</div>
+                    <div className="text-xs text-amber-600">
+                      理想 {trade.target_sell_price ?? "—"}
+                    </div>
                     <div className="text-slate-400">
                       {trade.actual_sell_price ?? "—"}
                     </div>
