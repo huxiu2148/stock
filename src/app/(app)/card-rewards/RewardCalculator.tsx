@@ -10,6 +10,7 @@ import {
   groupRulesByCard,
   matchMerchantCategories,
   matchedMerchantKeywords,
+  pickBestPlanChannel,
   rankCardRewards,
   type ChannelCategory,
 } from "@/lib/calc/cardRewards";
@@ -66,6 +67,14 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
     [manualCategory, autoCategories]
   );
 
+  // 消費類別換了 (打了新商店) 就清掉手動選過的方案，改回自動判斷最匹配的方案。
+  const categoriesKey = categories.join(",");
+  const [prevCategoriesKey, setPrevCategoriesKey] = useState(categoriesKey);
+  if (categoriesKey !== prevCategoriesKey) {
+    setPrevCategoriesKey(categoriesKey);
+    setActivePlanByCard({});
+  }
+
   // 有些卡片 (國泰CUBE、台新Richart) 同時間只能啟用一個方案，這裡算出每張卡有哪些方案可選。
   const planOptionsByCard = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getPlanOptions>>();
@@ -76,14 +85,15 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
     return map;
   }, [rulesByCard]);
 
-  // 尚未手動選過方案的卡片，預設用第一個方案。
+  // 尚未手動選過方案的卡片，自動選出跟這次消費最匹配的方案 (實際上本來就會先切換再刷)。
   const resolvedActivePlanByCard = useMemo(() => {
     const record: Record<string, string> = {};
     for (const [cardName, options] of planOptionsByCard) {
-      record[cardName] = activePlanByCard[cardName] ?? options[0].channel;
+      record[cardName] =
+        activePlanByCard[cardName] ?? pickBestPlanChannel(options, categories);
     }
     return record;
-  }, [planOptionsByCard, activePlanByCard]);
+  }, [planOptionsByCard, activePlanByCard, categories]);
 
   const results = useMemo(() => {
     const amountNum = Number(amount);

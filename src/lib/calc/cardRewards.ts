@@ -198,6 +198,22 @@ export function groupRulesByCard(
 }
 
 /**
+ * 這種每天可自由切換方案的卡 (國泰CUBE、台新Richart)，實際使用時本來就會挑跟這次
+ * 消費最匹配的方案再刷，所以自動選出最匹配的方案當預設值最貼近實際情況；
+ * 完全比對不到類別時，退回選第一個方案 (由呼叫端手動覆寫即可)。
+ */
+export function pickBestPlanChannel(
+  planOptions: CardRewardRule[],
+  categories: ChannelCategory[]
+): string {
+  const matched = planOptions.filter((r) =>
+    categorizeChannel(r.channel).some((c) => categories.includes(c))
+  );
+  const pool = matched.length > 0 ? matched : planOptions;
+  return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]).channel;
+}
+
+/**
  * 有些卡片 (例如國泰CUBE、台新Richart) 同時間只能啟用一個權益方案，
  * 這些規則會共用同一個 plan_group；回傳這張卡有哪些互斥方案可以選。
  */
