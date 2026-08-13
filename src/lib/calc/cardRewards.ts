@@ -129,6 +129,8 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["selfridges", ["網路購物"]],
   ["gmarket", ["網路購物"]],
   ["olive young", ["網路購物"]],
+  ["shein", ["網路購物"]],
+  ["farfetch", ["網路購物"]],
   ["大國藥妝", ["網路購物"]],
   ["sugi藥妝", ["網路購物"]],
   ["ikea", ["網路購物"]],
