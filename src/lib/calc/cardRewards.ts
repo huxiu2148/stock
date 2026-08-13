@@ -293,6 +293,8 @@ export function rankCardRewards(
   return results.sort((a, b) => {
     if (!a.rule && b.rule) return 1;
     if (a.rule && !b.rule) return -1;
-    return b.reward - a.reward;
+    if (b.reward !== a.reward) return b.reward - a.reward;
+    // 沒輸入金額時 reward 全部是 0，改用回饋比例排序。
+    return (b.rule?.rate ?? 0) - (a.rule?.rate ?? 0);
   });
 }

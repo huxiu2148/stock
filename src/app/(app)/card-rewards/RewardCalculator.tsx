@@ -95,9 +95,10 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
     return record;
   }, [planOptionsByCard, activePlanByCard, categories]);
 
+  const hasAmount = Number(amount) > 0;
+
   const results = useMemo(() => {
-    const amountNum = Number(amount);
-    if (!amountNum || amountNum <= 0) return [];
+    const amountNum = Number(amount) || 0;
     return rankCardRewards(
       rulesByCard,
       {
@@ -219,6 +220,11 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
 
       {results.length > 0 && (
         <div className="mt-4 space-y-2">
+          {!hasAmount && (
+            <p className="text-xs text-slate-400">
+              未輸入金額，以下依回饋比例排序（沒有計算上限的實際扣抵金額）
+            </p>
+          )}
           {results.map((r, i) => {
             const planOptions = planOptionsByCard.get(r.cardName);
             const activePlan = resolvedActivePlanByCard[r.cardName];
@@ -235,7 +241,7 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
                     {r.cardName}
                   </div>
                   <div className="text-lg font-bold text-slate-900">
-                    {formatCurrency(r.reward)}
+                    {hasAmount ? formatCurrency(r.reward) : r.rule ? `${r.rule.rate}%` : "—"}
                   </div>
                 </div>
 
