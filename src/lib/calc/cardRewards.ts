@@ -170,6 +170,7 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["google pay", ["行動支付"]],
   ["台灣pay", ["行動支付"]],
   ["taiwan pay", ["行動支付"]],
+  ["全支付", ["行動支付"]],
 ];
 
 /** 依輸入的商店/通路文字，比對出符合的消費類別 (可能同時符合多個，例如「日本 amazon」)。 */
