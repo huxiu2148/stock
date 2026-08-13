@@ -197,12 +197,40 @@ export function matchedMerchantKeywords(text: string): string[] {
 /** 已收錄的商店關鍵字清單，用於輸入框的自動完成建議。 */
 export const MERCHANT_KEYWORD_LIST: string[] = MERCHANT_KEYWORDS.map(([k]) => k);
 
+/** 把規則的 merchants 欄位 (用 / 、換行等分隔) 拆成個別商家名稱陣列。 */
+export function parseMerchantList(merchants: string | null): string[] {
+  if (!merchants) return [];
+  return merchants
+    .split(/[/、,，\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** 這次輸入的商店文字，是否對到規則的具體商家清單裡的任一個名稱 (雙向包含比對)。 */
+function matchesRuleMerchants(rule: CardRewardRule, searchText: string): boolean {
+  const normalized = searchText.trim().toLowerCase();
+  if (!normalized) return false;
+  return parseMerchantList(rule.merchants).some((m) => {
+    const nm = m.toLowerCase();
+    return normalized.includes(nm) || nm.includes(normalized);
+  });
+}
+
+/** 規則是否還在有效期間內 (valid_from/valid_until 皆為選填，留空代表沒有限制)。 */
+export function isRuleActive(rule: CardRewardRule, todayIso: string): boolean {
+  if (rule.valid_from && todayIso < rule.valid_from) return false;
+  if (rule.valid_until && todayIso > rule.valid_until) return false;
+  return true;
+}
+
 export interface RewardCalcInput {
   amount: number;
   currency: string;
   /** currency 為 TWD 時忽略；其他幣別用來換算成台幣估算回饋。 */
   exchangeRate: number;
-  /** 這次消費符合的消費類別 (通常是自動判斷商店名稱得出，也可以手動指定)。 */
+  /** 這次消費的商店/情境原始輸入文字，用來跟規則的具體商家清單比對。 */
+  merchantText: string;
+  /** 這次消費符合的消費類別；只有規則沒有填具體商家清單時才會拿來當退回比對用。 */
   categories: ChannelCategory[];
 }
 
@@ -226,16 +254,33 @@ export function groupRulesByCard(
 }
 
 /**
+ * 一筆規則是否適用這次消費：有填具體商家清單的話，只用商家清單比對 (更精準)；
+ * 沒有填的話才退回用 channel 文字概略比對消費類別。
+ */
+function ruleMatchesSpending(
+  rule: CardRewardRule,
+  merchantText: string,
+  categories: ChannelCategory[]
+): boolean {
+  const ruleCategories = categorizeChannel(rule.channel);
+  if (ruleCategories.includes("一般消費")) return true;
+  const merchants = parseMerchantList(rule.merchants);
+  if (merchants.length > 0) return matchesRuleMerchants(rule, merchantText);
+  return ruleCategories.some((c) => categories.includes(c));
+}
+
+/**
  * 這種每天可自由切換方案的卡 (國泰CUBE、台新Richart)，實際使用時本來就會挑跟這次
  * 消費最匹配的方案再刷，所以自動選出最匹配的方案當預設值最貼近實際情況；
- * 完全比對不到類別時，退回選第一個方案 (由呼叫端手動覆寫即可)。
+ * 完全比對不到時，退回選第一個方案 (由呼叫端手動覆寫即可)。
  */
 export function pickBestPlanChannel(
   planOptions: CardRewardRule[],
+  merchantText: string,
   categories: ChannelCategory[]
 ): string {
   const matched = planOptions.filter((r) =>
-    categorizeChannel(r.channel).some((c) => categories.includes(c))
+    ruleMatchesSpending(r, merchantText, categories)
   );
   const pool = matched.length > 0 ? matched : planOptions;
   return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]).channel;
@@ -243,34 +288,36 @@ export function pickBestPlanChannel(
 
 /**
  * 有些卡片 (例如國泰CUBE、台新Richart) 同時間只能啟用一個權益方案，
- * 這些規則會共用同一個 plan_group；回傳這張卡有哪些互斥方案可以選。
+ * 這些規則會共用同一個 plan_group；回傳這張卡有哪些互斥方案可以選 (排除已過期的)。
  */
-export function getPlanOptions(rules: CardRewardRule[]): CardRewardRule[] {
-  return rules.filter((r) => r.plan_group);
+export function getPlanOptions(
+  rules: CardRewardRule[],
+  todayIso: string = new Date().toISOString().slice(0, 10)
+): CardRewardRule[] {
+  return rules.filter((r) => r.plan_group && isRuleActive(r, todayIso));
 }
 
 /**
- * 挑出某張卡最適用的規則：先排除掉「屬於互斥方案分組、但不是目前啟用的那個」，
- * 再篩出「通路涵蓋這次消費類別」或「一般消費」的規則，
- * 幣別完全對應優先，其次是不限幣別的規則；有多筆時取回饋比例最高者
- * (這樣消費類別有對應到加碼規則時，加碼規則自然會贏過一般消費的基礎比例)。
+ * 挑出某張卡最適用的規則：先濾掉過期/還沒開始的規則、以及「屬於互斥方案分組、
+ * 但不是目前啟用的那個」，再篩出符合這次消費的規則 (有具體商家清單的規則只用
+ * 商家清單比對，沒有的話才退回用 channel 文字概略比對消費類別)，
+ * 幣別完全對應優先，其次是不限幣別的規則；有多筆時取回饋比例最高者。
  */
 function pickBestRule(
   rules: CardRewardRule[],
+  merchantText: string,
   categories: ChannelCategory[],
   currency: string,
-  activePlanChannel: string | null
+  activePlanChannel: string | null,
+  todayIso: string
 ): CardRewardRule | null {
   const eligible = rules.filter(
-    (r) => !r.plan_group || r.channel === activePlanChannel
+    (r) =>
+      (!r.plan_group || r.channel === activePlanChannel) && isRuleActive(r, todayIso)
   );
-  const applicable = eligible.filter((r) => {
-    const ruleCategories = categorizeChannel(r.channel);
-    return (
-      ruleCategories.includes("一般消費") ||
-      ruleCategories.some((c) => categories.includes(c))
-    );
-  });
+  const applicable = eligible.filter((r) =>
+    ruleMatchesSpending(r, merchantText, categories)
+  );
   const currencyMatched = applicable.filter((r) => r.currency_scope === currency);
   const pool = currencyMatched.length > 0
     ? currencyMatched
@@ -290,14 +337,17 @@ export function rankCardRewards(
 ): CardRewardResult[] {
   const amountTwd =
     input.currency === "TWD" ? input.amount : input.amount * input.exchangeRate;
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const results: CardRewardResult[] = [];
   for (const [cardName, rules] of rulesByCard) {
     const rule = pickBestRule(
       rules,
+      input.merchantText,
       input.categories,
       input.currency,
-      activePlanByCard[cardName] ?? null
+      activePlanByCard[cardName] ?? null,
+      todayIso
     );
     const reward = rule
       ? Math.min(amountTwd * (rule.rate / 100), rule.max_reward ?? Infinity)

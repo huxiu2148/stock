@@ -8,6 +8,7 @@ import {
   updateCardRewardRule,
   deleteCardRewardRule,
 } from "@/lib/repo/cardRewards";
+import { isRuleActive } from "@/lib/calc/cardRewards";
 import type { CardRewardRule } from "@/types/database";
 import { CardRewardRuleForm } from "./CardRewardRuleForm";
 import { RewardCalculator } from "./RewardCalculator";
@@ -102,6 +103,8 @@ export default function CardRewardsPage() {
                     <th className="py-2 pr-3">回饋比例</th>
                     <th className="py-2 pr-3">上限</th>
                     <th className="py-2 pr-3">方案分組</th>
+                    <th className="py-2 pr-3">適用商家</th>
+                    <th className="py-2 pr-3">期限</th>
                     <th className="py-2 pr-3">備註</th>
                     <th className="py-2 pr-3"></th>
                   </tr>
@@ -111,7 +114,7 @@ export default function CardRewardsPage() {
                     if (editingId === rule.id) {
                       return (
                         <tr key={rule.id}>
-                          <td colSpan={8} className="py-3">
+                          <td colSpan={10} className="py-3">
                             <CardRewardRuleForm
                               initial={rule}
                               knownPlanGroups={knownPlanGroups}
@@ -129,8 +132,12 @@ export default function CardRewardsPage() {
                         </tr>
                       );
                     }
+                    const active = isRuleActive(rule, new Date().toISOString().slice(0, 10));
                     return (
-                      <tr key={rule.id} className="border-b border-slate-100">
+                      <tr
+                        key={rule.id}
+                        className={`border-b border-slate-100 ${!active ? "opacity-40" : ""}`}
+                      >
                         <td className="py-2 pr-3 font-medium text-slate-800">
                           {rule.card_name}
                         </td>
@@ -144,6 +151,22 @@ export default function CardRewardsPage() {
                         </td>
                         <td className="py-2 pr-3 text-slate-400">
                           {rule.plan_group ?? "—"}
+                        </td>
+                        <td
+                          className="max-w-[160px] truncate py-2 pr-3 text-slate-400"
+                          title={rule.merchants ?? undefined}
+                        >
+                          {rule.merchants ?? "（用通路概略判斷）"}
+                        </td>
+                        <td className="py-2 pr-3 text-slate-400 whitespace-nowrap">
+                          {rule.valid_from || rule.valid_until
+                            ? `${rule.valid_from ?? "—"} ~ ${rule.valid_until ?? "—"}`
+                            : "—"}
+                          {!active && (
+                            <span className="ml-1 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] text-rose-600">
+                              已過期
+                            </span>
+                          )}
                         </td>
                         <td className="py-2 pr-3 text-slate-400">{rule.note ?? "—"}</td>
                         <td className="py-2 pr-3 text-right whitespace-nowrap">

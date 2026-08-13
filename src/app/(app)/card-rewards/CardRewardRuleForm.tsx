@@ -50,6 +50,18 @@ export function CardRewardRuleForm({
   const [rate, setRate] = useState(field(initial?.rate ?? 0));
   const [maxReward, setMaxReward] = useState(field(initial?.max_reward));
   const [planGroup, setPlanGroup] = useState(initial?.plan_group ?? "");
+  const [merchants, setMerchants] = useState(initial?.merchants ?? "");
+  const [requiresRegistration, setRequiresRegistration] = useState(
+    initial?.requires_registration ?? false
+  );
+  const [registrationNote, setRegistrationNote] = useState(
+    initial?.registration_note ?? ""
+  );
+  const [paymentMethodNote, setPaymentMethodNote] = useState(
+    initial?.payment_method_note ?? ""
+  );
+  const [validFrom, setValidFrom] = useState(initial?.valid_from ?? "");
+  const [validUntil, setValidUntil] = useState(initial?.valid_until ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +81,12 @@ export function CardRewardRuleForm({
         rate: Number(rate) || 0,
         max_reward: numOrNull(maxReward),
         plan_group: planGroup.trim() || null,
+        merchants: merchants.trim() || null,
+        requires_registration: requiresRegistration,
+        registration_note: registrationNote.trim() || null,
+        payment_method_note: paymentMethodNote.trim() || null,
+        valid_from: validFrom || null,
+        valid_until: validUntil || null,
         note: note.trim() || null,
       });
     } catch (err) {
@@ -175,10 +193,72 @@ export function CardRewardRuleForm({
       </label>
 
       <label className={`${labelCls} col-span-2 sm:col-span-4`}>
+        <span className={capCls}>適用商家清單 (選填，用 / 分隔，貼上官方名單)</span>
+        <textarea
+          value={merchants}
+          placeholder="例如：momo / PChome / 蝦皮，留空則用上面的消費通路概略判斷類別"
+          onChange={(e) => setMerchants(e.target.value)}
+          rows={2}
+          className={`${inputCls} resize-y`}
+        />
+      </label>
+
+      <label className={labelCls}>
+        <span className={capCls}>生效日 (選填)</span>
+        <input
+          type="date"
+          value={validFrom}
+          onChange={(e) => setValidFrom(e.target.value)}
+          className={inputCls}
+        />
+      </label>
+      <label className={labelCls}>
+        <span className={capCls}>到期日 (選填)</span>
+        <input
+          type="date"
+          value={validUntil}
+          onChange={(e) => setValidUntil(e.target.value)}
+          className={inputCls}
+        />
+      </label>
+      <label className={`${labelCls} justify-end`}>
+        <span className={capCls}>需要額外操作</span>
+        <label className="flex items-center gap-2 py-1.5 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={requiresRegistration}
+            onChange={(e) => setRequiresRegistration(e.target.checked)}
+          />
+          需要登錄
+        </label>
+      </label>
+      {requiresRegistration && (
+        <label className={labelCls}>
+          <span className={capCls}>登錄方式說明</span>
+          <input
+            value={registrationNote}
+            placeholder="例如：每季登錄一次，限量2000名"
+            onChange={(e) => setRegistrationNote(e.target.value)}
+            className={inputCls}
+          />
+        </label>
+      )}
+
+      <label className={`${labelCls} col-span-2 sm:col-span-4`}>
+        <span className={capCls}>限定支付方式 (選填)</span>
+        <input
+          value={paymentMethodNote}
+          placeholder="例如：限台新Pay綁定支付，刷實體卡不算"
+          onChange={(e) => setPaymentMethodNote(e.target.value)}
+          className={inputCls}
+        />
+      </label>
+
+      <label className={`${labelCls} col-span-2 sm:col-span-4`}>
         <span className={capCls}>備註</span>
         <input
           value={note}
-          placeholder="例如活動期限、需事先登錄"
+          placeholder="例如其他限制條件"
           onChange={(e) => setNote(e.target.value)}
           className={inputCls}
         />

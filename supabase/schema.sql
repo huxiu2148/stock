@@ -226,11 +226,17 @@ create table if not exists card_reward_rules (
   user_id uuid not null references auth.users(id) on delete cascade,
 
   card_name text not null,      -- 卡片名稱，例如：國泰CUBE
-  channel text not null,        -- 消費通路，例如：一般消費、網路購物、海外消費、行動支付
+  channel text not null,        -- 方案/通路標籤，例如：一般消費、大筆刷、玩旅刷
   currency_scope text,          -- 限定幣別 (例如僅海外消費適用)，留空 = 不限
   rate numeric not null default 0,   -- 回饋比例 (%)，例如 3 表示 3%
   max_reward numeric,           -- 回饋上限金額 (台幣)，選填
   plan_group text,              -- 互斥方案分組 (例如國泰CUBE、台新Richart 同時間只能啟用一個方案)，留空 = 一律適用
+  merchants text,               -- 適用商家清單，用 / 分隔，留空則退回用 channel 粗略比對類別
+  requires_registration boolean not null default false,
+  registration_note text,       -- 登錄方式/限量/期限等說明
+  payment_method_note text,     -- 限定支付方式的說明 (例如「限台新Pay绑定支付」)
+  valid_from date,              -- 活動生效日，留空 = 沒有限制
+  valid_until date,             -- 活動到期日，過了這天自動不再比對到
   note text,
 
   created_at timestamptz not null default now(),

@@ -90,10 +90,10 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
     const record: Record<string, string> = {};
     for (const [cardName, options] of planOptionsByCard) {
       record[cardName] =
-        activePlanByCard[cardName] ?? pickBestPlanChannel(options, categories);
+        activePlanByCard[cardName] ?? pickBestPlanChannel(options, merchant, categories);
     }
     return record;
-  }, [planOptionsByCard, activePlanByCard, categories]);
+  }, [planOptionsByCard, activePlanByCard, merchant, categories]);
 
   const hasAmount = Number(amount) > 0;
 
@@ -105,11 +105,12 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
         amount: amountNum,
         currency,
         exchangeRate: currency === "TWD" ? 1 : Number(exchangeRate) || 1,
+        merchantText: merchant,
         categories,
       },
       resolvedActivePlanByCard
     );
-  }, [rulesByCard, amount, currency, exchangeRate, categories, resolvedActivePlanByCard]);
+  }, [rulesByCard, amount, currency, exchangeRate, merchant, categories, resolvedActivePlanByCard]);
 
   const inputCls =
     "rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
@@ -285,6 +286,20 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
                     "尚未設定符合的回饋規則"
                   )}
                 </div>
+
+                {r.rule?.requires_registration && (
+                  <div className="mt-1 text-xs font-medium text-amber-600">
+                    ⚠️ 需要登錄{r.rule.registration_note ? `：${r.rule.registration_note}` : ""}
+                  </div>
+                )}
+                {r.rule?.payment_method_note && (
+                  <div className="mt-1 text-xs text-amber-600">
+                    💳 {r.rule.payment_method_note}
+                  </div>
+                )}
+                {r.rule?.note && (
+                  <div className="mt-1 text-xs text-slate-400">{r.rule.note}</div>
+                )}
               </div>
             );
           })}

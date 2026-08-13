@@ -199,11 +199,17 @@ export interface CardRewardRule {
   id: string;
   user_id: string;
   card_name: string; // 卡片名稱，例如：國泰CUBE
-  channel: string; // 消費通路，例如：一般消費、網路購物、海外消費、行動支付
+  channel: string; // 方案/通路標籤，例如：一般消費、大筆刷、玩旅刷
   currency_scope: string | null; // 限定幣別 (例如僅海外消費適用)，null = 不限
   rate: number; // 回饋比例 (%)，例如 3 表示 3%
   max_reward: number | null; // 回饋上限金額 (台幣)，選填
   plan_group: string | null; // 互斥方案分組 (同時間只能啟用其中一個)，null = 一律適用
+  merchants: string | null; // 適用商家清單，用 / 分隔，留空則退回用 channel 粗略比對類別
+  requires_registration: boolean; // 是否需要登錄/額外操作才能拿到這個回饋
+  registration_note: string | null; // 登錄方式/限量/期限等說明
+  payment_method_note: string | null; // 限定支付方式的說明 (例如「限台新Pay绑定支付」)
+  valid_from: string | null; // 活動生效日，null = 沒有限制
+  valid_until: string | null; // 活動到期日，過了這天自動不再比對到
   note: string | null;
   created_at: string;
   updated_at: string;
