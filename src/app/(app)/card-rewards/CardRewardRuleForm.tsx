@@ -22,6 +22,7 @@ const KNOWN_CARDS = [
   "聯邦linebank",
   "富邦J卡",
   "兆豐e秒刷",
+  "悠遊付",
 ];
 
 const CHANNEL_SUGGESTIONS = ["一般消費", "網路購物", "海外消費", "行動支付", "超商", "加油"];

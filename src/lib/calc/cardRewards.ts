@@ -76,6 +76,7 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["好市多", ["超商量販"]],
   ["starbucks", ["餐飲"]],
   ["星巴克", ["餐飲"]],
+  ["夜市", ["餐飲"]],
   ["foodpanda", ["餐飲"]],
   ["ubereats", ["餐飲"]],
   ["uber eats", ["餐飲"]],
