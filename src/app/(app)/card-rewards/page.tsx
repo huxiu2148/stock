@@ -12,6 +12,7 @@ import { isRuleActive } from "@/lib/calc/cardRewards";
 import type { CardRewardRule } from "@/types/database";
 import { CardRewardRuleForm } from "./CardRewardRuleForm";
 import { RewardCalculator } from "./RewardCalculator";
+import { CardRewardTransactions } from "./CardRewardTransactions";
 
 export default function CardRewardsPage() {
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,8 @@ export default function CardRewardsPage() {
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <RewardCalculator rules={rules} />
       </section>
+
+      <CardRewardTransactions rules={rules} />
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between">

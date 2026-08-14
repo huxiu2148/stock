@@ -244,6 +244,25 @@ create table if not exists card_reward_rules (
 );
 
 -- ============================================================
+-- 刷卡紀錄：記錄每一筆實際刷卡消費，方便對照回饋規則的月結上限有沒有刷到頂
+-- ============================================================
+create table if not exists card_reward_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+
+  card_name text not null,
+  channel text,                    -- 對應 card_reward_rules.channel，留空 = 未分類
+  transaction_date date not null,  -- 消費日
+  statement_date date,             -- 結帳日，用來判斷這筆算哪一期帳單的回饋上限
+  amount_twd numeric not null default 0,
+  reward_twd numeric,              -- 這筆預估/實際回饋金額
+  note text,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
 -- Row Level Security: 每個使用者只能存取自己的資料
 -- ============================================================
 alter table salary_records enable row level security;
@@ -258,12 +277,13 @@ alter table loan_payments enable row level security;
 alter table credit_cards enable row level security;
 alter table credit_card_statements enable row level security;
 alter table card_reward_rules enable row level security;
+alter table card_reward_transactions enable row level security;
 
 do $$
 declare
   t text;
 begin
-  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades','user_settings','loans','loan_payments','credit_cards','credit_card_statements','card_reward_rules']
+  foreach t in array array['salary_records','overtime_entries','late_entries','leave_entries','leave_balances','stock_trades','user_settings','loans','loan_payments','credit_cards','credit_card_statements','card_reward_rules','card_reward_transactions']
   loop
     execute format('drop policy if exists "select_own" on %I', t);
     execute format('create policy "select_own" on %I for select using (auth.uid() = user_id)', t);
@@ -284,3 +304,4 @@ create index if not exists idx_salary_user_month on salary_records(user_id, year
 create index if not exists idx_loan_payments_loan on loan_payments(loan_id, pay_date);
 create index if not exists idx_credit_card_statements_card on credit_card_statements(card_id, year_month);
 create index if not exists idx_card_reward_rules_user on card_reward_rules(user_id, card_name, channel);
+create index if not exists idx_card_reward_transactions_user on card_reward_transactions(user_id, card_name, channel, statement_date);

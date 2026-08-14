@@ -220,3 +220,25 @@ export type CardRewardRuleInput = Omit<
   "id" | "user_id" | "created_at" | "updated_at"
 >;
 
+// ============================================================
+// 刷卡紀錄 (每一筆實際消費，用來對照回饋規則的月結上限刷了多少)
+// ============================================================
+export interface CardRewardTransaction {
+  id: string;
+  user_id: string;
+  card_name: string;
+  channel: string | null; // 對應 CardRewardRule.channel，null = 未分類
+  transaction_date: string; // 消費日
+  statement_date: string | null; // 結帳日，用來判斷這筆算哪一期帳單
+  amount_twd: number;
+  reward_twd: number | null; // 這筆預估/實際回饋金額
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CardRewardTransactionInput = Omit<
+  CardRewardTransaction,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+

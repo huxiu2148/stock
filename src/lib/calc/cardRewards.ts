@@ -327,6 +327,11 @@ function pickBestRule(
   return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]);
 }
 
+/** 依規則的回饋比例跟單筆上限，算出某個台幣金額能拿到的回饋。 */
+export function calcRuleReward(rule: CardRewardRule, amountTwd: number): number {
+  return Math.min(amountTwd * (rule.rate / 100), rule.max_reward ?? Infinity);
+}
+
 /**
  * 依回饋金額由高到低排序每張卡的試算結果；沒有對應規則的卡片排在最後。
  * activePlanByCard: 卡片名稱 -> 目前啟用的方案 (規則的 channel)，只有互斥方案卡片需要提供。
@@ -350,9 +355,7 @@ export function rankCardRewards(
       activePlanByCard[cardName] ?? null,
       todayIso
     );
-    const reward = rule
-      ? Math.min(amountTwd * (rule.rate / 100), rule.max_reward ?? Infinity)
-      : 0;
+    const reward = rule ? calcRuleReward(rule, amountTwd) : 0;
     results.push({ cardName, rule, amountTwd, reward });
   }
 
