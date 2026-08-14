@@ -11,6 +11,8 @@ import {
 import {
   calcRuleReward,
   matchMerchantCategories,
+  MERCHANT_KEYWORD_LIST,
+  parseMerchantList,
   ruleMatchesSpending,
 } from "@/lib/calc/cardRewards";
 import type {
@@ -357,6 +359,21 @@ function TransactionForm({
     [rules, cardName, channel]
   );
 
+  // 商家/情境的建議清單：優先用目前選的通路自己的商家清單 (最準)，
+  // 沒有的話退回這張卡所有通路的商家清單，再退回通用商家關鍵字清單。
+  const merchantOptions = useMemo(() => {
+    const ruleMerchants = parseMerchantList(matchedRule?.merchants ?? null);
+    if (ruleMerchants.length > 0) return ruleMerchants;
+    const cardMerchants = [
+      ...new Set(
+        rules
+          .filter((r) => r.card_name === cardName)
+          .flatMap((r) => parseMerchantList(r.merchants))
+      ),
+    ];
+    return cardMerchants.length > 0 ? cardMerchants : MERCHANT_KEYWORD_LIST;
+  }, [matchedRule, rules, cardName]);
+
   // 選好卡片/通路/金額後，自動帶入試算的建議回饋金額；使用者改過的話就不再覆蓋。
   const suggestedReward = useMemo(() => {
     const amt = numOrNull(amount);
@@ -490,13 +507,19 @@ function TransactionForm({
         />
       </label>
       <label className={`${labelCls} col-span-2 sm:col-span-4`}>
-        <span className={capCls}>商家/情境 (選填，用來核對上面選的通路實際有沒有套用到)</span>
+        <span className={capCls}>商家/情境 (選填，可直接打字或從清單選，用來核對通路實際有沒有套用到)</span>
         <input
           value={merchantText}
+          list="txn-merchant-options"
           placeholder="例如：7-11"
           onChange={(e) => setMerchantText(e.target.value)}
           className={inputCls}
         />
+        <datalist id="txn-merchant-options">
+          {merchantOptions.map((m) => (
+            <option key={m} value={m} />
+          ))}
+        </datalist>
         {mismatched && (
           <p className="text-xs text-amber-600">
             ⚠️「{channel}」的商家清單/類別比對不到「{merchantText}」，當下可能沒有真的套用到這個通路的回饋(例如忘記切換權益)，建議手動確認/更正上面的回饋金額
