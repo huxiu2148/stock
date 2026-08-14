@@ -374,25 +374,26 @@ function TransactionForm({
     return cardMerchants.length > 0 ? cardMerchants : MERCHANT_KEYWORD_LIST;
   }, [matchedRule, rules, cardName]);
 
-  // 選好卡片/通路/金額後，自動帶入試算的建議回饋金額；使用者改過的話就不再覆蓋。
-  const suggestedReward = useMemo(() => {
-    const amt = numOrNull(amount);
-    if (!matchedRule || amt == null) return null;
-    return calcRuleReward(matchedRule, amt);
-  }, [matchedRule, amount]);
-
-  const suggestionKey = matchedRule ? `${matchedRule.id}:${amount}` : "";
-  const [prevSuggestionKey, setPrevSuggestionKey] = useState(suggestionKey);
-  if (suggestionKey !== prevSuggestionKey) {
-    setPrevSuggestionKey(suggestionKey);
-    if (!rewardTouched && suggestedReward != null) {
-      setReward(String(Math.round(suggestedReward)));
-    }
-  }
-
   // 選的通路(例如玩旅刷)跟實際填的商家/情境(例如7-11)比對不到，代表當下可能沒有真的套用到，
   // 常見於忘記切換權益的情況，提醒使用者自己核對/更正回饋金額。
   const mismatched = isMismatched(matchedRule, merchantText);
+
+  // 選好卡片/通路/金額後，自動帶入試算的建議回饋金額；比對不到商家/情境時不帶入(避免照著不適用的比例算)。
+  // 使用者自己改過回饋金額的話，就不再自動覆蓋。
+  const suggestedReward = useMemo(() => {
+    const amt = numOrNull(amount);
+    if (!matchedRule || amt == null || mismatched) return null;
+    return calcRuleReward(matchedRule, amt);
+  }, [matchedRule, amount, mismatched]);
+
+  const suggestionKey = matchedRule ? `${matchedRule.id}:${amount}:${mismatched}` : "";
+  const [prevSuggestionKey, setPrevSuggestionKey] = useState(suggestionKey);
+  if (suggestionKey !== prevSuggestionKey) {
+    setPrevSuggestionKey(suggestionKey);
+    if (!rewardTouched) {
+      setReward(suggestedReward != null ? String(Math.round(suggestedReward)) : "");
+    }
+  }
 
   const valid = cardName.trim() !== "" && transactionDate !== "" && amount.trim() !== "";
 
@@ -493,7 +494,12 @@ function TransactionForm({
       </label>
       <label className={labelCls}>
         <span className={capCls}>
-          回饋金額 {matchedRule && <span className="text-slate-400">(已依規則試算，可覆寫)</span>}
+          回饋金額{" "}
+          {mismatched ? (
+            <span className="text-amber-600">(比對不到商家，未自動試算，請填實際金額)</span>
+          ) : (
+            matchedRule && <span className="text-slate-400">(已依規則試算，可覆寫)</span>
+          )}
         </span>
         <input
           type="number"
