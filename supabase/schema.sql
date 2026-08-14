@@ -256,6 +256,7 @@ create table if not exists card_reward_transactions (
   statement_date date,             -- 結帳日，用來判斷這筆算哪一期帳單的回饋上限
   amount_twd numeric not null default 0,
   reward_twd numeric,              -- 這筆預估/實際回饋金額
+  merchant_text text,              -- 實際消費的商家/情境，用來核對選的通路有沒有真的套用到
   note text,
 
   created_at timestamptz not null default now(),

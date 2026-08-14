@@ -232,6 +232,7 @@ export interface CardRewardTransaction {
   statement_date: string | null; // 結帳日，用來判斷這筆算哪一期帳單
   amount_twd: number;
   reward_twd: number | null; // 這筆預估/實際回饋金額
+  merchant_text: string | null; // 實際消費的商家/情境，用來核對選的通路有沒有真的套用到
   note: string | null;
   created_at: string;
   updated_at: string;

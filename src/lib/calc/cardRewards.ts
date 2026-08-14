@@ -258,7 +258,7 @@ export function groupRulesByCard(
  * 一筆規則是否適用這次消費：有填具體商家清單的話，只用商家清單比對 (更精準)；
  * 沒有填的話才退回用 channel 文字概略比對消費類別。
  */
-function ruleMatchesSpending(
+export function ruleMatchesSpending(
   rule: CardRewardRule,
   merchantText: string,
   categories: ChannelCategory[]

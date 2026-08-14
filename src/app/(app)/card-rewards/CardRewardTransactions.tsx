@@ -8,7 +8,11 @@ import {
   updateCardRewardTransaction,
   deleteCardRewardTransaction,
 } from "@/lib/repo/cardRewardTransactions";
-import { calcRuleReward } from "@/lib/calc/cardRewards";
+import {
+  calcRuleReward,
+  matchMerchantCategories,
+  ruleMatchesSpending,
+} from "@/lib/calc/cardRewards";
 import type {
   CardRewardRule,
   CardRewardTransaction,
@@ -35,6 +39,13 @@ function numOrNull(v: string): number | null {
 
 function formatMoney(n: number): string {
   return `NT$${Math.round(n).toLocaleString()}`;
+}
+
+/** 選的通路跟實際商家/情境比對不到，代表當下可能沒有真的套用到這個通路的回饋(例如忘記切換權益)。 */
+function isMismatched(rule: CardRewardRule | null, merchantText: string): boolean {
+  const text = merchantText.trim();
+  if (!rule || text === "") return false;
+  return !ruleMatchesSpending(rule, text, matchMerchantCategories(text));
 }
 
 export function CardRewardTransactions({ rules }: Props) {
@@ -203,6 +214,7 @@ export function CardRewardTransactions({ rules }: Props) {
                     <th className="py-2 pr-3">結帳日</th>
                     <th className="py-2 pr-3">卡片</th>
                     <th className="py-2 pr-3">通路</th>
+                    <th className="py-2 pr-3">商家/情境</th>
                     <th className="py-2 pr-3">金額</th>
                     <th className="py-2 pr-3">回饋</th>
                     <th className="py-2 pr-3">備註</th>
@@ -214,7 +226,7 @@ export function CardRewardTransactions({ rules }: Props) {
                     if (editingId === t.id) {
                       return (
                         <tr key={t.id}>
-                          <td colSpan={8} className="py-3">
+                          <td colSpan={9} className="py-3">
                             <TransactionForm
                               rules={rules}
                               knownCards={knownCards}
@@ -236,6 +248,11 @@ export function CardRewardTransactions({ rules }: Props) {
                         </tr>
                       );
                     }
+                    const rowRule =
+                      rules.find(
+                        (r) => r.card_name === t.card_name && r.channel === t.channel
+                      ) ?? null;
+                    const mismatched = isMismatched(rowRule, t.merchant_text ?? "");
                     return (
                       <tr key={t.id} className="border-b border-slate-100">
                         <td className="py-2 pr-3 text-slate-600">{t.transaction_date}</td>
@@ -245,7 +262,20 @@ export function CardRewardTransactions({ rules }: Props) {
                         <td className="py-2 pr-3 font-medium text-slate-800">
                           {t.card_name}
                         </td>
-                        <td className="py-2 pr-3 text-slate-600">{t.channel ?? "—"}</td>
+                        <td className="py-2 pr-3 text-slate-600">
+                          {t.channel ?? "—"}
+                          {mismatched && (
+                            <span
+                              className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700"
+                              title="這個通路的商家清單/類別比對不到你填的商家/情境，可能沒有真的套用到這個回饋"
+                            >
+                              ⚠️可能沒套用
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-3 text-slate-400">
+                          {t.merchant_text ?? "—"}
+                        </td>
                         <td className="py-2 pr-3 text-slate-600">
                           {formatMoney(t.amount_twd)}
                         </td>
@@ -312,6 +342,7 @@ function TransactionForm({
   const [amount, setAmount] = useState(field(initial?.amount_twd));
   const [reward, setReward] = useState(field(initial?.reward_twd));
   const [rewardTouched, setRewardTouched] = useState(false);
+  const [merchantText, setMerchantText] = useState(initial?.merchant_text ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -342,6 +373,10 @@ function TransactionForm({
     }
   }
 
+  // 選的通路(例如玩旅刷)跟實際填的商家/情境(例如7-11)比對不到，代表當下可能沒有真的套用到，
+  // 常見於忘記切換權益的情況，提醒使用者自己核對/更正回饋金額。
+  const mismatched = isMismatched(matchedRule, merchantText);
+
   const valid = cardName.trim() !== "" && transactionDate !== "" && amount.trim() !== "";
 
   async function handleSubmit(e: React.FormEvent) {
@@ -357,6 +392,7 @@ function TransactionForm({
         statement_date: statementDate || null,
         amount_twd: Number(amount) || 0,
         reward_twd: numOrNull(reward),
+        merchant_text: merchantText.trim() || null,
         note: note.trim() || null,
       });
     } catch (err) {
@@ -452,6 +488,20 @@ function TransactionForm({
           }}
           className={inputCls}
         />
+      </label>
+      <label className={`${labelCls} col-span-2 sm:col-span-4`}>
+        <span className={capCls}>商家/情境 (選填，用來核對上面選的通路實際有沒有套用到)</span>
+        <input
+          value={merchantText}
+          placeholder="例如：7-11"
+          onChange={(e) => setMerchantText(e.target.value)}
+          className={inputCls}
+        />
+        {mismatched && (
+          <p className="text-xs text-amber-600">
+            ⚠️「{channel}」的商家清單/類別比對不到「{merchantText}」，當下可能沒有真的套用到這個通路的回饋(例如忘記切換權益)，建議手動確認/更正上面的回饋金額
+          </p>
+        )}
       </label>
       <label className={`${labelCls} col-span-2 sm:col-span-4`}>
         <span className={capCls}>備註</span>
