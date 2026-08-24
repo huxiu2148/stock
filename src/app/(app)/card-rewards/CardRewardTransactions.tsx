@@ -9,8 +9,8 @@ import {
   deleteCardRewardTransaction,
 } from "@/lib/repo/cardRewardTransactions";
 import {
+  analyzeSpendingText,
   calcRuleReward,
-  matchMerchantCategories,
   MERCHANT_KEYWORD_LIST,
   parseMerchantList,
   ruleMatchesSpending,
@@ -47,7 +47,8 @@ function formatMoney(n: number): string {
 function isMismatched(rule: CardRewardRule | null, merchantText: string): boolean {
   const text = merchantText.trim();
   if (!rule || text === "") return false;
-  return !ruleMatchesSpending(rule, text, matchMerchantCategories(text));
+  const { categories, scenarioCategories } = analyzeSpendingText(text);
+  return !ruleMatchesSpending(rule, text, categories, scenarioCategories);
 }
 
 export function CardRewardTransactions({ rules }: Props) {

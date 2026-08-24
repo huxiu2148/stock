@@ -6,10 +6,10 @@ import {
   CHANNEL_CATEGORIES,
   MERCHANT_KEYWORD_LIST,
   REWARD_CURRENCIES,
+  SCENARIO_KEYWORD_LIST,
+  analyzeSpendingText,
   getPlanOptions,
   groupRulesByCard,
-  matchMerchantCategories,
-  matchedMerchantKeywords,
   pickBestPlanChannel,
   rankCardRewards,
   type ChannelCategory,
@@ -60,12 +60,11 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
   }, [currency, fetchedCurrency]);
 
   const rulesByCard = useMemo(() => groupRulesByCard(rules), [rules]);
-  const autoCategories = useMemo(() => matchMerchantCategories(merchant), [merchant]);
-  const matchedKeywords = useMemo(() => matchedMerchantKeywords(merchant), [merchant]);
-  const categories = useMemo(
-    () => (manualCategory ? [manualCategory] : autoCategories),
-    [manualCategory, autoCategories]
+  const analysis = useMemo(
+    () => analyzeSpendingText(merchant, manualCategory || null),
+    [merchant, manualCategory]
   );
+  const { categories, scenarioCategories, matchedKeywords } = analysis;
 
   // 消費類別換了 (打了新商店) 就清掉手動選過的方案，改回自動判斷最匹配的方案。
   const categoriesKey = categories.join(",");
@@ -90,10 +89,11 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
     const record: Record<string, string> = {};
     for (const [cardName, options] of planOptionsByCard) {
       record[cardName] =
-        activePlanByCard[cardName] ?? pickBestPlanChannel(options, merchant, categories);
+        activePlanByCard[cardName] ??
+        pickBestPlanChannel(options, merchant, categories, scenarioCategories);
     }
     return record;
-  }, [planOptionsByCard, activePlanByCard, merchant, categories]);
+  }, [planOptionsByCard, activePlanByCard, merchant, categories, scenarioCategories]);
 
   const hasAmount = Number(amount) > 0;
 
@@ -107,10 +107,20 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
         exchangeRate: currency === "TWD" ? 1 : Number(exchangeRate) || 1,
         merchantText: merchant,
         categories,
+        scenarioCategories,
       },
       resolvedActivePlanByCard
     );
-  }, [rulesByCard, amount, currency, exchangeRate, merchant, categories, resolvedActivePlanByCard]);
+  }, [
+    rulesByCard,
+    amount,
+    currency,
+    exchangeRate,
+    merchant,
+    categories,
+    scenarioCategories,
+    resolvedActivePlanByCard,
+  ]);
 
   const inputCls =
     "rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
@@ -165,16 +175,16 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
           </label>
         )}
         <label className={labelCls}>
-          <span className={capCls}>消費商店/通路</span>
+          <span className={capCls}>消費商店/情境</span>
           <input
             value={merchant}
             list="known-merchant-keywords"
-            placeholder="例如 pchome、7-11、日本 SOGO"
+            placeholder="店名或情境都可以，例如 蝦皮、7-11、訂房、加油、出國"
             onChange={(e) => setMerchant(e.target.value)}
             className={inputCls}
           />
           <datalist id="known-merchant-keywords">
-            {MERCHANT_KEYWORD_LIST.map((k) => (
+            {[...SCENARIO_KEYWORD_LIST, ...MERCHANT_KEYWORD_LIST].map((k) => (
               <option key={k} value={k} />
             ))}
           </datalist>
@@ -207,10 +217,12 @@ export function RewardCalculator({ rules }: RewardCalculatorProps) {
         {manualCategory
           ? `已手動指定為：${manualCategory}`
           : merchant.trim() === ""
-          ? "輸入商店名稱後，會自動判斷消費類別，辨識不到時也可以手動指定"
-          : autoCategories.length > 0
-          ? `符合關鍵字：${matchedKeywords.join("、")} → 辨識為：${autoCategories.join("、")}`
-          : "無法辨識通路類別，僅計算一般消費回饋（也可以手動指定類別）"}
+          ? "可以直接打店名（蝦皮、7-11），也可以打情境（訂房、加油、追劇、出國）"
+          : categories.length > 0
+          ? `${analysis.isSpecificMerchant ? "認出商店" : "認出情境"}：${matchedKeywords.join(
+              "、"
+            )} → ${categories.join("、")}`
+          : "認不出這是什麼消費，只算各卡的一般消費回饋（也可以手動指定類別）"}
       </p>
       {categories.includes("海外消費") || categories.includes("日韓消費") ? (
         <p className="mt-1 text-xs text-amber-600">

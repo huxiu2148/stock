@@ -5,10 +5,13 @@ export const REWARD_CURRENCIES = ["TWD", "USD", "KRW", "JPY", "CNY"] as const;
 export type ChannelCategory =
   | "網路購物"
   | "超商量販"
+  | "百貨"
   | "餐飲"
   | "數位影音"
   | "主流影音訂閱"
   | "悠遊卡加值"
+  | "加油"
+  | "交通"
   | "旅遊"
   | "日韓消費"
   | "海外消費"
@@ -24,18 +27,106 @@ export type ChannelCategory =
  * 分開後規則的通路文字才能精準只觸發它實際涵蓋的範圍，避免誤判。
  */
 const CATEGORY_KEYWORDS: [ChannelCategory, string[]][] = [
-  ["網路購物", ["網購", "購物"]],
-  ["超商量販", ["超商", "量販", "超市"]],
-  ["餐飲", ["餐飲", "美食", "外送"]],
+  ["網路購物", ["網購", "購物", "電商"]],
+  ["超商量販", ["超商", "量販", "超市", "便利商店"]],
+  ["百貨", ["百貨", "outlet", "商場"]],
+  ["餐飲", ["餐飲", "美食", "外送", "餐廳"]],
   ["數位影音", ["數位", "遊戲", "影音", "串流"]],
   ["主流影音訂閱", ["訂閱", "主流影音"]],
   ["悠遊卡加值", ["加值"]],
-  ["旅遊", ["旅遊", "旅行", "訂房", "機票"]],
+  ["加油", ["加油", "油站", "充電"]],
+  ["交通", ["交通", "停車", "計程車", "叫車", "捷運", "高鐵", "臺鐵", "台鐵"]],
+  ["旅遊", ["旅遊", "旅行", "訂房", "機票", "航空", "飯店", "住宿"]],
   ["日韓消費", ["日韓", "日本", "韓國"]],
   ["海外消費", ["海外", "國外"]],
   ["行動支付", ["行動支付", "電子支付"]],
   ["一般消費", ["一般消費"]],
 ];
+
+/**
+ * 使用者輸入的「情境泛稱」→ 消費類別。跟 MERCHANT_KEYWORDS (具體品牌) 分開的原因：
+ *
+ * 打具體品牌 (例如「麥當勞」) 時，卡片的商家清單有沒有列到它就是答案，
+ * 不能因為它屬於餐飲類就硬塞進某張卡的餐飲方案 (麥當勞其實被排除在台新好饗刷之外)。
+ *
+ * 但打泛稱 (例如「吃飯」) 時，本來就沒有specific商家可以排除，
+ * 這時用類別比對才是使用者要的：「我要吃飯，哪張卡的餐飲方案最好？」
+ */
+const SCENARIO_KEYWORDS: [string, ChannelCategory[]][] = [
+  ["網購", ["網路購物"]],
+  ["網路購物", ["網路購物"]],
+  ["電商", ["網路購物"]],
+  ["線上購物", ["網路購物"]],
+  ["買東西", ["網路購物", "超商量販", "百貨"]],
+  ["超商", ["超商量販"]],
+  ["便利商店", ["超商量販"]],
+  ["超市", ["超商量販"]],
+  ["量販", ["超商量販"]],
+  ["百貨", ["百貨"]],
+  ["outlet", ["百貨"]],
+  ["商場", ["百貨"]],
+  ["逛街", ["百貨"]],
+  ["餐廳", ["餐飲"]],
+  ["吃飯", ["餐飲"]],
+  ["用餐", ["餐飲"]],
+  ["美食", ["餐飲"]],
+  ["聚餐", ["餐飲"]],
+  ["外送", ["餐飲"]],
+  ["手搖", ["餐飲"]],
+  ["咖啡", ["餐飲"]],
+  ["追劇", ["數位影音", "主流影音訂閱"]],
+  ["影音", ["數位影音", "主流影音訂閱"]],
+  ["串流", ["數位影音", "主流影音訂閱"]],
+  ["訂閱", ["數位影音", "主流影音訂閱"]],
+  ["遊戲", ["數位影音"]],
+  ["課金", ["數位影音"]],
+  ["加油", ["加油"]],
+  ["油錢", ["加油"]],
+  ["充電", ["加油"]],
+  ["停車", ["交通"]],
+  ["計程車", ["交通"]],
+  ["叫車", ["交通"]],
+  ["交通", ["交通"]],
+  ["通勤", ["交通"]],
+  ["高鐵", ["交通"]],
+  ["火車", ["交通"]],
+  ["旅遊", ["旅遊"]],
+  ["旅行", ["旅遊"]],
+  ["出國", ["旅遊", "海外消費"]],
+  ["度假", ["旅遊"]],
+  ["訂房", ["旅遊"]],
+  ["飯店", ["旅遊"]],
+  ["住宿", ["旅遊"]],
+  ["機票", ["旅遊"]],
+  ["航空", ["旅遊"]],
+  ["悠遊卡", ["悠遊卡加值"]],
+  ["一卡通", ["悠遊卡加值"]],
+  ["行動支付", ["行動支付"]],
+  ["電子支付", ["行動支付"]],
+  ["海外", ["海外消費"]],
+  ["國外", ["海外消費"]],
+  ["境外", ["海外消費"]],
+  ["overseas", ["海外消費"]],
+  ["日本", ["日韓消費", "海外消費"]],
+  ["韓國", ["日韓消費", "海外消費"]],
+  ["日韓", ["日韓消費", "海外消費"]],
+];
+
+/**
+ * 依使用者輸入的文字，比對出其中「情境泛稱」對應的消費類別。
+ * 這些類別可以套用到有具體商家清單的規則上 (具體品牌名則不行，見 SCENARIO_KEYWORDS 說明)。
+ */
+export function matchScenarioCategories(text: string): ChannelCategory[] {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return [];
+  const matched = new Set<ChannelCategory>();
+  for (const [keyword, categories] of SCENARIO_KEYWORDS) {
+    if (normalized.includes(keyword.toLowerCase())) {
+      categories.forEach((c) => matched.add(c));
+    }
+  }
+  return [...matched];
+}
 
 /** 可手動指定的消費類別清單 (不含「一般消費」，因為那一律都會當作保底自動套用)。 */
 export const CHANNEL_CATEGORIES: ChannelCategory[] = CATEGORY_KEYWORDS.map(
@@ -139,10 +230,44 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   ["uniqlo", ["網路購物"]],
   ["zara", ["網路購物"]],
   ["lululemon", ["網路購物"]],
-  ["新光三越", ["網路購物"]],
-  ["遠東百貨", ["網路購物"]],
-  ["漢神", ["網路購物"]],
-  ["outlet", ["網路購物"]],
+  ["新光三越", ["百貨"]],
+  ["遠東百貨", ["百貨"]],
+  ["遠東sogo", ["百貨"]],
+  ["微風", ["百貨"]],
+  ["台北101", ["百貨"]],
+  ["誠品生活", ["百貨"]],
+  ["京站", ["百貨"]],
+  ["漢神", ["百貨"]],
+  ["夢時代", ["百貨"]],
+  ["大遠百", ["百貨"]],
+  ["中友百貨", ["百貨"]],
+  ["outlet", ["百貨"]],
+  // 加油/充電
+  ["中油", ["加油"]],
+  ["台塑石油", ["加油"]],
+  ["台亞", ["加油"]],
+  ["全國加油", ["加油"]],
+  ["速邁樂", ["加油"]],
+  ["u-power", ["加油"]],
+  ["evoasis", ["加油"]],
+  ["evalue", ["加油"]],
+  // 交通
+  ["高鐵", ["交通"]],
+  ["臺鐵", ["交通"]],
+  ["台鐵", ["交通"]],
+  ["捷運", ["交通"]],
+  ["台灣大車隊", ["交通"]],
+  ["yoxi", ["交通"]],
+  ["55688", ["交通"]],
+  ["uber", ["交通"]],
+  ["bolt", ["交通"]],
+  ["linego", ["交通"]],
+  ["車麻吉", ["交通"]],
+  ["uspace", ["交通"]],
+  ["utagg", ["交通"]],
+  ["irent", ["交通"]],
+  ["和運租車", ["交通"]],
+  ["格上租車", ["交通"]],
   ["長榮", ["旅遊"]],
   ["華航", ["旅遊"]],
   ["eva air", ["旅遊"]],
@@ -156,20 +281,16 @@ const MERCHANT_KEYWORDS: [string, ChannelCategory[]][] = [
   // 「日本sogo」等含國名的完整說法，或手動指定類別，比較準確。
   ["唐吉訶德", ["超商量販"]],
   ["sogo", ["網路購物"]],
-  ["suica", ["日韓消費", "海外消費"]],
-  ["pasmo", ["日韓消費", "海外消費"]],
+  // 日本交通卡：儲值是透過 App/線上完成，不是「人在日本面對面刷卡」，
+  // 標成海外消費會讓卡片的海外實體加碼誤判成適用，所以只標交通。
+  ["suica", ["交通"]],
+  ["pasmo", ["交通"]],
+  ["icoca", ["交通"]],
   ["韓國", ["日韓消費", "海外消費"]],
   ["korea", ["日韓消費", "海外消費"]],
   ["首爾", ["日韓消費", "海外消費"]],
   ["美國", ["海外消費"]],
   ["usa", ["海外消費"]],
-  // 通用描述詞 (不是特定商家/國名)，讓「海外線上消費」「國外刷卡」這種泛稱也能歸到海外消費，
-  // 才對得到那些沒有填具體商家清單、只靠類別概略比對的規則 (例如CUBE趣旅行-海外實體、星展ECO海外消費)。
-  // 有填具體商家清單的規則 (例如Richart玩旅刷限歐洲國家) 不受影響，那些規則只認清單裡的地名。
-  ["海外", ["海外消費"]],
-  ["國外", ["海外消費"]],
-  ["境外", ["海外消費"]],
-  ["overseas", ["海外消費"]],
   ["line pay", ["行動支付"]],
   ["街口", ["行動支付"]],
   ["jkopay", ["行動支付"]],
@@ -205,6 +326,58 @@ export function matchedMerchantKeywords(text: string): string[] {
 /** 已收錄的商店關鍵字清單，用於輸入框的自動完成建議。 */
 export const MERCHANT_KEYWORD_LIST: string[] = MERCHANT_KEYWORDS.map(([k]) => k);
 
+/** 已收錄的情境泛稱清單，用於輸入框的自動完成建議。 */
+export const SCENARIO_KEYWORD_LIST: string[] = SCENARIO_KEYWORDS.map(([k]) => k);
+
+export interface SpendingTextAnalysis {
+  /** 全部類別 (具體品牌 + 情境泛稱 + 手動指定)。 */
+  categories: ChannelCategory[];
+  /** 其中可以套用到「有具體商家清單」規則上的類別。 */
+  scenarioCategories: ChannelCategory[];
+  /** 實際比對到的關鍵字原文，用於畫面顯示。 */
+  matchedKeywords: string[];
+  /** 是否認得這是某個具體品牌 (而不是泛稱)。 */
+  isSpecificMerchant: boolean;
+}
+
+/**
+ * 解析使用者輸入的消費文字，決定要用「具體商家」還是「情境泛稱」的比對方式。
+ *
+ * 關鍵在於兩者不能混用：打得出具體品牌時 (例如「中華航空」)，代表使用者很清楚要刷哪一間，
+ * 這時該嚴格照各家的商家清單判斷；如果同時放行泛稱比對，「中華航空」裡的「航空」二字
+ * 會讓它誤判成適用所有標了旅遊類的方案 (連清單裡根本沒有中華航空的訂房平台方案都會中)。
+ * 反過來打泛稱時 (例如「訂房」)，本來就沒有specific商家可以查，用類別比對才問得到答案。
+ */
+export function analyzeSpendingText(
+  text: string,
+  manualCategory?: ChannelCategory | null
+): SpendingTextAnalysis {
+  const merchantCategories = matchMerchantCategories(text);
+  const isSpecificMerchant = merchantCategories.length > 0;
+  // 認得是具體品牌時就不再套用泛稱，避免品牌名裡剛好含有泛稱字眼造成誤判。
+  const fromScenario = isSpecificMerchant ? [] : matchScenarioCategories(text);
+  const scenarioCategories = [
+    ...new Set([...fromScenario, ...(manualCategory ? [manualCategory] : [])]),
+  ];
+  return {
+    categories: [...new Set([...merchantCategories, ...scenarioCategories])],
+    scenarioCategories,
+    matchedKeywords: isSpecificMerchant
+      ? matchedMerchantKeywords(text)
+      : matchedScenarioKeywords(text),
+    isSpecificMerchant,
+  };
+}
+
+/** 找出輸入文字裡實際比對到的情境泛稱原文，用於畫面顯示。 */
+function matchedScenarioKeywords(text: string): string[] {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return [];
+  return SCENARIO_KEYWORDS.filter(([keyword]) =>
+    normalized.includes(keyword.toLowerCase())
+  ).map(([keyword]) => keyword);
+}
+
 /** 把規則的 merchants 欄位 (用 / 、換行等分隔) 拆成個別商家名稱陣列。 */
 export function parseMerchantList(merchants: string | null): string[] {
   if (!merchants) return [];
@@ -214,14 +387,42 @@ export function parseMerchantList(merchants: string | null): string[] {
     .filter(Boolean);
 }
 
-/** 這次輸入的商店文字，是否對到規則的具體商家清單裡的任一個名稱 (雙向包含比對)。 */
-function matchesRuleMerchants(rule: CardRewardRule, searchText: string): boolean {
+/**
+ * 這次輸入的商店文字，對到規則的具體商家清單裡最長的那個名稱有幾個字 (0 = 沒對到)。
+ *
+ * 回傳長度而不是 true/false，是為了在多個規則都對得到時分出「誰比較精準」：
+ * 例如打「Uber Eats」，台新天天刷清單裡的「Uber」跟好饗刷清單裡的「Uber Eats」都會
+ * 被字串包含比到，但後者明顯才是使用者的意思，用比對長度就能選對。
+ */
+function merchantMatchScore(rule: CardRewardRule, searchText: string): number {
   const normalized = searchText.trim().toLowerCase();
-  if (!normalized) return false;
-  return parseMerchantList(rule.merchants).some((m) => {
+  if (!normalized) return 0;
+  let best = 0;
+  for (const m of parseMerchantList(rule.merchants)) {
     const nm = m.toLowerCase();
-    return normalized.includes(nm) || nm.includes(normalized);
-  });
+    if (normalized.includes(nm) || nm.includes(normalized)) {
+      best = Math.max(best, Math.min(nm.length, normalized.length));
+    }
+  }
+  return best;
+}
+
+/**
+ * 一筆規則實際涵蓋哪些消費類別：除了通路名稱的文字，也把商家清單裡每個商家的類別算進來。
+ *
+ * 因為銀行取的方案名稱常常跟實際涵蓋範圍對不上 (例如台新「天天刷」在系統裡叫「超商量販」，
+ * 但清單裡其實還有中油、臺鐵、台灣大車隊、藥妝店)，只看名稱會讓「加油」「通勤」這種
+ * 情境永遠比不到它。從清單反推類別才能反映這條規則真正能用在哪。
+ */
+function ruleCoveredCategories(rule: CardRewardRule): ChannelCategory[] {
+  const fromChannel = categorizeChannel(rule.channel);
+  const merchants = parseMerchantList(rule.merchants);
+  if (merchants.length === 0) return fromChannel;
+  const all = new Set<ChannelCategory>(fromChannel);
+  for (const m of merchants) {
+    for (const c of matchMerchantCategories(m)) all.add(c);
+  }
+  return [...all];
 }
 
 /** 規則是否還在有效期間內 (valid_from/valid_until 皆為選填，留空代表沒有限制)。 */
@@ -238,8 +439,13 @@ export interface RewardCalcInput {
   exchangeRate: number;
   /** 這次消費的商店/情境原始輸入文字，用來跟規則的具體商家清單比對。 */
   merchantText: string;
-  /** 這次消費符合的消費類別；只有規則沒有填具體商家清單時才會拿來當退回比對用。 */
+  /** 這次消費符合的全部消費類別 (具體品牌 + 情境泛稱 + 手動指定)。 */
   categories: ChannelCategory[];
+  /**
+   * 其中屬於「情境泛稱/手動指定」的類別。這些可以套用到有具體商家清單的規則上，
+   * 具體品牌推導出來的類別則不行 (原因見 SCENARIO_KEYWORDS 說明)。留空則等同 categories。
+   */
+  scenarioCategories?: ChannelCategory[];
 }
 
 export interface CardRewardResult {
@@ -262,19 +468,40 @@ export function groupRulesByCard(
 }
 
 /**
- * 一筆規則是否適用這次消費：有填具體商家清單的話，只用商家清單比對 (更精準)；
- * 沒有填的話才退回用 channel 文字概略比對消費類別。
+ * 一筆規則是否適用這次消費，以及對得多精準 (分數越高越精準，0 = 不適用)。
+ *
+ * 有填具體商家清單的規則，商家名比對優先 (最精準)；比不到時，只接受「情境泛稱」的類別比對，
+ * 不接受具體品牌推導出來的類別 —— 因為打具體品牌時，清單沒列到它通常就代表真的不適用
+ * (例如麥當勞明文被排除在台新好饗刷之外，不能因為它是餐飲就硬算)。
+ * 沒填清單的規則沒有這個顧慮，用全部類別比對。
  */
+function ruleMatchScore(
+  rule: CardRewardRule,
+  merchantText: string,
+  categories: ChannelCategory[],
+  scenarioCategories: ChannelCategory[]
+): number {
+  const covered = ruleCoveredCategories(rule);
+  if (covered.includes("一般消費")) return 1;
+
+  const hasMerchantList = parseMerchantList(rule.merchants).length > 0;
+  if (hasMerchantList) {
+    const score = merchantMatchScore(rule, merchantText);
+    // 對到具體商家名：加權讓它一定排在純類別比對前面。
+    if (score > 0) return 1000 + score;
+    return covered.some((c) => scenarioCategories.includes(c)) ? 10 : 0;
+  }
+  return covered.some((c) => categories.includes(c)) ? 10 : 0;
+}
+
+/** 一筆規則是否適用這次消費 (給畫面上「這個通路對不對得上」的提示用)。 */
 export function ruleMatchesSpending(
   rule: CardRewardRule,
   merchantText: string,
-  categories: ChannelCategory[]
+  categories: ChannelCategory[],
+  scenarioCategories: ChannelCategory[] = categories
 ): boolean {
-  const ruleCategories = categorizeChannel(rule.channel);
-  if (ruleCategories.includes("一般消費")) return true;
-  const merchants = parseMerchantList(rule.merchants);
-  if (merchants.length > 0) return matchesRuleMerchants(rule, merchantText);
-  return ruleCategories.some((c) => categories.includes(c));
+  return ruleMatchScore(rule, merchantText, categories, scenarioCategories) > 0;
 }
 
 /**
@@ -285,13 +512,30 @@ export function ruleMatchesSpending(
 export function pickBestPlanChannel(
   planOptions: CardRewardRule[],
   merchantText: string,
-  categories: ChannelCategory[]
+  categories: ChannelCategory[],
+  scenarioCategories: ChannelCategory[] = categories
 ): string {
-  const matched = planOptions.filter((r) =>
-    ruleMatchesSpending(r, merchantText, categories)
-  );
-  const pool = matched.length > 0 ? matched : planOptions;
-  return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]).channel;
+  const scored = planOptions
+    .map((r) => ({
+      rule: r,
+      score: ruleMatchScore(r, merchantText, categories, scenarioCategories),
+    }))
+    .filter((x) => x.score > 0);
+  if (scored.length === 0) return planOptions[0].channel;
+  return pickHighestRate(scored).rule.channel;
+}
+
+/**
+ * 從適用的規則裡挑最划算的：回饋比例最高者優先 (那才是實際能拿到的錢)，
+ * 比例一樣時才看誰對得比較精準 (例如「Uber Eats」同時對到清單裡的「Uber」跟「Uber Eats」，選後者)。
+ */
+function pickHighestRate<T extends { rule: CardRewardRule; score: number }>(
+  scored: T[]
+): T {
+  return scored.reduce((best, x) => {
+    if (x.rule.rate !== best.rule.rate) return x.rule.rate > best.rule.rate ? x : best;
+    return x.score > best.score ? x : best;
+  }, scored[0]);
 }
 
 /**
@@ -315,6 +559,7 @@ function pickBestRule(
   rules: CardRewardRule[],
   merchantText: string,
   categories: ChannelCategory[],
+  scenarioCategories: ChannelCategory[],
   currency: string,
   activePlanChannel: string | null,
   todayIso: string
@@ -323,15 +568,19 @@ function pickBestRule(
     (r) =>
       (!r.plan_group || r.channel === activePlanChannel) && isRuleActive(r, todayIso)
   );
-  const applicable = eligible.filter((r) =>
-    ruleMatchesSpending(r, merchantText, categories)
-  );
-  const currencyMatched = applicable.filter((r) => r.currency_scope === currency);
-  const pool = currencyMatched.length > 0
-    ? currencyMatched
-    : applicable.filter((r) => !r.currency_scope);
+  const applicable = eligible
+    .map((r) => ({
+      rule: r,
+      score: ruleMatchScore(r, merchantText, categories, scenarioCategories),
+    }))
+    .filter((x) => x.score > 0);
+  const currencyMatched = applicable.filter((x) => x.rule.currency_scope === currency);
+  const pool =
+    currencyMatched.length > 0
+      ? currencyMatched
+      : applicable.filter((x) => !x.rule.currency_scope);
   if (pool.length === 0) return null;
-  return pool.reduce((best, r) => (r.rate > best.rate ? r : best), pool[0]);
+  return pickHighestRate(pool).rule;
 }
 
 /** 依規則的回饋比例跟單筆上限，算出某個台幣金額能拿到的回饋。 */
@@ -358,6 +607,7 @@ export function rankCardRewards(
       rules,
       input.merchantText,
       input.categories,
+      input.scenarioCategories ?? input.categories,
       input.currency,
       activePlanByCard[cardName] ?? null,
       todayIso
